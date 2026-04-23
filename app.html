@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>FLL Team · App</title>
+    <link rel="stylesheet" href="css/base.css" />
+    <link rel="stylesheet" href="css/components.css" />
+    <link rel="stylesheet" href="css/layout.css" />
+    <link rel="stylesheet" href="css/scorer.css" />
+    <link rel="stylesheet" href="css/responsive.css" />
+</head>
+<body>
+    <div class="app" id="app">
+        <header class="app-header">
+            <h1>FLL Team</h1>
+            <select class="selector-equipo" id="selector-equipo" aria-label="Equipo activo">
+                <option value="">— Selecciona equipo —</option>
+            </select>
+            <button class="btn btn--ghost btn-logout" id="btn-logout">Salir</button>
+        </header>
+
+        <nav class="app-nav" aria-label="Navegación principal">
+            <a href="#scorer"    data-ruta="scorer"><span class="icon">⏱️</span>Scorer</a>
+            <a href="#equipos"   data-ruta="equipos"><span class="icon">🏁</span>Equipos</a>
+            <a href="#jugadores" data-ruta="jugadores"><span class="icon">👥</span>Jugadores</a>
+            <a href="#misiones"  data-ruta="misiones"><span class="icon">🧩</span>Misiones</a>
+            <a href="#rankings"  data-ruta="rankings"><span class="icon">🏆</span>Rankings</a>
+            <a href="#analisis"  data-ruta="analisis"><span class="icon">📈</span>Análisis</a>
+        </nav>
+
+        <main class="app-main" id="vista"></main>
+    </div>
+
+    <div class="toast-container" id="toasts"></div>
+    <div id="modal-root"></div>
+
+    <!-- Config y librerías -->
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
+    <!-- Núcleo -->
+    <script src="js/supabaseClient.js"></script>
+    <script src="js/utils.js"></script>
+    <script src="js/auth.js"></script>
+
+    <!-- Capa API -->
+    <script src="js/api/equipos.js"></script>
+    <script src="js/api/jugadores.js"></script>
+    <script src="js/api/misiones.js"></script>
+    <script src="js/api/posiciones.js"></script>
+    <script src="js/api/cuadrillas.js"></script>
+    <script src="js/api/duplas.js"></script>
+    <script src="js/api/partidas.js"></script>
+
+    <!-- Módulos de vista -->
+    <script src="js/modules/equipos.js"></script>
+    <script src="js/modules/jugadores.js"></script>
+    <script src="js/modules/misiones.js"></script>
+    <script src="js/modules/scorer.js"></script>
+    <script src="js/modules/rankings.js"></script>
+    <script src="js/modules/analisis.js"></script>
+
+    <!-- Router + arranque -->
+    <script src="js/router.js"></script>
+    <script src="js/main.js"></script>
+</body>
+</html>

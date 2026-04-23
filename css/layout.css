@@ -1,0 +1,149 @@
+/* ===================================================================
+   App-shell: cabecera, navegación lateral/inferior y área de contenido
+   =================================================================== */
+
+.app {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+    min-height: 100vh;
+}
+
+/* ---------------- HEADER ---------------- */
+.app-header {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.6rem 1rem;
+    background: var(--c-bg-2);
+    border-bottom: 1px solid var(--c-bg-3);
+    position: sticky;
+    top: 0;
+    z-index: 50;
+}
+
+.app-header h1 {
+    font-size: 1.1rem;
+    margin: 0;
+    letter-spacing: 0.02em;
+}
+
+.app-header .selector-equipo {
+    margin-left: auto;
+    min-width: 160px;
+}
+
+.app-header .btn-logout {
+    font-size: 0.85rem;
+    padding: 0.4rem 0.7rem;
+    min-height: 36px;
+}
+
+/* ---------------- MAIN ---------------- */
+.app-main {
+    padding: 1rem;
+    overflow-x: hidden;
+}
+
+/* ---------------- NAVEGACIÓN INFERIOR (móvil) ---------------- */
+.app-nav {
+    display: grid;
+    grid-template-columns: repeat(6, 1fr);
+    background: var(--c-bg-2);
+    border-top: 1px solid var(--c-bg-3);
+    position: sticky;
+    bottom: 0;
+    z-index: 50;
+}
+
+.app-nav a {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: 0.5rem 0.2rem;
+    color: var(--c-text-dim);
+    text-decoration: none;
+    font-size: 0.72rem;
+    text-align: center;
+    border-top: 3px solid transparent;
+    min-height: 58px;
+}
+
+.app-nav a .icon {
+    font-size: 1.3rem;
+    line-height: 1;
+}
+
+.app-nav a.activo {
+    color: var(--c-primary);
+    border-top-color: var(--c-primary);
+    background: rgba(59, 130, 246, 0.08);
+}
+
+/* ---------------- ESTRUCTURA DE PÁGINAS ---------------- */
+.page-header {
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+    margin-bottom: 1rem;
+    flex-wrap: wrap;
+}
+
+.page-header h2 {
+    margin: 0;
+    font-size: 1.35rem;
+}
+
+.page-header .acciones {
+    margin-left: auto;
+    display: flex;
+    gap: 0.5rem;
+}
+
+.grid {
+    display: grid;
+    gap: 1rem;
+}
+
+/* ---------------- LOGIN ---------------- */
+.login-wrap {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 1rem;
+    background: radial-gradient(circle at top, #1e3a8a 0%, var(--c-bg) 60%);
+}
+
+.login-box {
+    width: 100%;
+    max-width: 380px;
+    padding: 1.8rem 1.5rem;
+    background: var(--c-bg-2);
+    border: 1px solid var(--c-bg-3);
+    border-radius: var(--radius-lg);
+    box-shadow: var(--shadow);
+}
+
+.login-box h1 {
+    text-align: center;
+    margin-bottom: 1.2rem;
+}
+
+.login-box .sub {
+    text-align: center;
+    color: var(--c-text-dim);
+    margin-bottom: 1.5rem;
+    font-size: 0.9rem;
+}
+
+.login-box .btn {
+    width: 100%;
+}
+
+.login-box .switch {
+    margin-top: 1rem;
+    text-align: center;
+    font-size: 0.9rem;
+}

@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0" />
+    <title>FLL Team · Entrenamientos</title>
+    <link rel="stylesheet" href="css/base.css" />
+</head>
+<body>
+    <div class="loading-screen">
+        <div class="spinner"></div>
+        <p>Cargando…</p>
+    </div>
+
+    <script src="config.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <script>
+        // Decide a dónde enviar al usuario según sesión activa.
+        (async () => {
+            const cfg = window.FLL_CONFIG || {};
+            if (!cfg.SUPABASE_URL || !cfg.SUPABASE_ANON_KEY) {
+                document.body.innerHTML =
+                    "<div style='padding:2rem;font-family:sans-serif'>" +
+                    "<h1>⚠ Configuración pendiente</h1>" +
+                    "<p>Copia <code>config.example.js</code> como <code>config.js</code> " +
+                    "y define <code>SUPABASE_URL</code> y <code>SUPABASE_ANON_KEY</code>.</p>" +
+                    "</div>";
+                return;
+            }
+            const client = window.supabase.createClient(
+                cfg.SUPABASE_URL,
+                cfg.SUPABASE_ANON_KEY
+            );
+            const { data } = await client.auth.getSession();
+            window.location.replace(data.session ? "app.html" : "login.html");
+        })();
+    </script>
+</body>
+</html>

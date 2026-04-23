@@ -1,0 +1,264 @@
+/* ===================================================================
+   Componentes reutilizables: botones, formularios, cards, modales,
+   toasts, tablas y chips.
+   =================================================================== */
+
+/* ----------------------- BOTONES ----------------------- */
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.4rem;
+    min-height: 44px;          /* tamaño táctil cómodo */
+    padding: 0.6rem 1.1rem;
+    background: var(--c-primary);
+    color: #fff;
+    border: none;
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.05s ease;
+    user-select: none;
+}
+
+.btn:hover:not(:disabled)  { background: var(--c-primary-2); }
+.btn:active                { transform: scale(0.98); }
+.btn:disabled              { opacity: 0.5; cursor: not-allowed; }
+
+.btn--ghost {
+    background: transparent;
+    color: var(--c-text);
+    border: 1px solid var(--c-bg-3);
+}
+.btn--ghost:hover:not(:disabled) { background: var(--c-bg-2); }
+
+.btn--success { background: var(--c-success); }
+.btn--success:hover:not(:disabled) { background: #16a34a; }
+
+.btn--danger  { background: var(--c-danger); }
+.btn--danger:hover:not(:disabled)  { background: #dc2626; }
+
+.btn--warning { background: var(--c-warning); color: #111; }
+.btn--warning:hover:not(:disabled) { background: #d97706; }
+
+.btn--big {
+    min-height: 60px;
+    font-size: 1.15rem;
+    padding: 0.9rem 1.6rem;
+}
+
+.btn--icon {
+    min-width: 44px;
+    padding: 0.4rem 0.6rem;
+}
+
+/* ----------------------- FORMULARIOS ----------------------- */
+.form-field {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    margin-bottom: 0.9rem;
+}
+
+.form-field label {
+    font-size: 0.9rem;
+    color: var(--c-text-dim);
+}
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+select,
+textarea {
+    width: 100%;
+    min-height: 44px;
+    padding: 0.55rem 0.8rem;
+    background: var(--c-bg);
+    color: var(--c-text);
+    border: 1px solid var(--c-bg-3);
+    border-radius: var(--radius);
+    font-size: 1rem;
+    font-family: inherit;
+}
+
+textarea {
+    min-height: 80px;
+    resize: vertical;
+}
+
+input:focus, select:focus, textarea:focus {
+    outline: 2px solid var(--c-primary);
+    outline-offset: 0;
+    border-color: var(--c-primary);
+}
+
+/* ----------------------- CARDS ----------------------- */
+.card {
+    background: var(--c-bg-2);
+    border: 1px solid var(--c-bg-3);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+}
+
+.card h2, .card h3 {
+    margin-bottom: 0.6rem;
+}
+
+.card + .card {
+    margin-top: 1rem;
+}
+
+/* ----------------------- MODAL ----------------------- */
+.modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 1000;
+    padding: 1rem;
+    animation: fadeIn 0.15s ease;
+}
+
+.modal {
+    background: var(--c-bg-2);
+    border: 1px solid var(--c-bg-3);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 480px;
+    max-height: 90vh;
+    overflow-y: auto;
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+.modal h2 {
+    margin-bottom: 1rem;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: flex-end;
+    margin-top: 1rem;
+}
+
+@keyframes fadeIn { from {opacity: 0;} to {opacity: 1;} }
+
+/* ----------------------- TOAST ----------------------- */
+.toast-container {
+    position: fixed;
+    top: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2000;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    pointer-events: none;
+}
+
+.toast {
+    background: var(--c-bg-2);
+    border: 1px solid var(--c-bg-3);
+    color: var(--c-text);
+    padding: 0.7rem 1.1rem;
+    border-radius: var(--radius);
+    box-shadow: var(--shadow);
+    font-size: 0.95rem;
+    pointer-events: auto;
+    animation: toastIn 0.2s ease;
+    max-width: 90vw;
+}
+
+.toast--success { border-left: 4px solid var(--c-success); }
+.toast--error   { border-left: 4px solid var(--c-danger); }
+.toast--info    { border-left: 4px solid var(--c-primary); }
+
+@keyframes toastIn {
+    from { opacity: 0; transform: translateY(-10px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* ----------------------- CHIPS / BADGES ----------------------- */
+.chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.3rem;
+    background: var(--c-bg-3);
+    color: var(--c-text);
+    padding: 0.2rem 0.6rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+}
+
+.chip--azul  { background: var(--c-base-azul);  color: #fff; }
+.chip--roja  { background: var(--c-base-roja);  color: #fff; }
+
+/* ----------------------- TABLAS ----------------------- */
+.tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.95rem;
+}
+
+.tabla th, .tabla td {
+    padding: 0.55rem 0.7rem;
+    text-align: left;
+    border-bottom: 1px solid var(--c-bg-3);
+}
+
+.tabla th {
+    color: var(--c-text-dim);
+    font-weight: 600;
+    font-size: 0.85rem;
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.tabla tr:last-child td { border-bottom: none; }
+
+.tabla--compact th, .tabla--compact td { padding: 0.35rem 0.5rem; }
+
+/* Tabla scrollable horizontal en móvil */
+.tabla-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+/* ----------------------- LISTA DE ITEMS ----------------------- */
+.item-list {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.item-list li {
+    background: var(--c-bg);
+    border: 1px solid var(--c-bg-3);
+    border-radius: var(--radius);
+    padding: 0.7rem 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.8rem;
+}
+
+.item-list li .acciones {
+    margin-left: auto;
+    display: flex;
+    gap: 0.3rem;
+}
+
+/* ----------------------- VACÍO ----------------------- */
+.empty {
+    padding: 2rem 1rem;
+    text-align: center;
+    color: var(--c-text-dim);
+}

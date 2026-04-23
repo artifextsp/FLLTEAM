@@ -1,0 +1,75 @@
+/* ===================================================================
+   Media queries - mobile-first
+   =================================================================== */
+
+/* --- Tablet (≥ 720px) --- */
+@media (min-width: 720px) {
+    .app-header h1 { font-size: 1.3rem; }
+    .app-main      { padding: 1.5rem; }
+
+    .bases {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .scorer-top {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 1rem;
+        align-items: start;
+    }
+}
+
+/* --- Portátil / escritorio pequeño (≥ 1024px) --- */
+@media (min-width: 1024px) {
+    .app {
+        grid-template-columns: 230px 1fr;
+        grid-template-rows: auto 1fr;
+        grid-template-areas:
+            "header header"
+            "nav    main";
+    }
+
+    .app-header { grid-area: header; }
+    .app-main   { grid-area: main; padding: 1.5rem 2rem; }
+
+    .app-nav {
+        grid-area: nav;
+        grid-template-columns: 1fr;
+        grid-auto-rows: min-content;
+        border-top: none;
+        border-right: 1px solid var(--c-bg-3);
+        position: sticky;
+        top: 56px;
+        height: calc(100vh - 56px);
+        align-content: start;
+    }
+
+    .app-nav a {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: 0.6rem;
+        padding: 0.8rem 1.1rem;
+        font-size: 0.95rem;
+        border-top: none;
+        border-left: 3px solid transparent;
+    }
+
+    .app-nav a.activo {
+        border-left-color: var(--c-primary);
+        border-top: none;
+    }
+
+    .app-nav a .icon { font-size: 1.2rem; }
+
+    .cronometro .tiempo { font-size: 10rem; }
+
+    .misiones-grid {
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    }
+}
+
+/* --- Escritorio grande (≥ 1280px) --- */
+@media (min-width: 1280px) {
+    .app-main { max-width: 1400px; margin: 0 auto; width: 100%; }
+}

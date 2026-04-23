@@ -1,0 +1,116 @@
+/* ===================================================================
+   Reset + variables globales + tipografía base
+   =================================================================== */
+
+*,
+*::before,
+*::after {
+    box-sizing: border-box;
+}
+
+html,
+body {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+}
+
+:root {
+    /* Paleta */
+    --c-bg:          #0f172a;   /* azul slate muy oscuro */
+    --c-bg-2:        #1e293b;   /* paneles */
+    --c-bg-3:        #334155;   /* bordes suaves */
+    --c-text:        #f1f5f9;
+    --c-text-dim:    #94a3b8;
+    --c-primary:     #3b82f6;   /* azul */
+    --c-primary-2:   #2563eb;
+    --c-success:     #22c55e;
+    --c-danger:      #ef4444;
+    --c-warning:     #f59e0b;
+
+    --c-base-azul:   #2563eb;
+    --c-base-azul-2: #1d4ed8;
+    --c-base-roja:   #dc2626;
+    --c-base-roja-2: #b91c1c;
+
+    /* Dimensiones */
+    --radius:        10px;
+    --radius-lg:     16px;
+    --shadow:        0 4px 16px rgba(0, 0, 0, 0.25);
+    --font:          system-ui, -apple-system, "Segoe UI", Roboto,
+                     "Helvetica Neue", Arial, sans-serif;
+}
+
+body {
+    font-family: var(--font);
+    background-color: var(--c-bg);
+    color: var(--c-text);
+    font-size: 16px;
+    line-height: 1.4;
+    -webkit-tap-highlight-color: transparent;
+    overscroll-behavior: none;
+}
+
+h1, h2, h3, h4 {
+    margin: 0 0 0.6rem 0;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+p {
+    margin: 0 0 0.6rem 0;
+}
+
+a {
+    color: var(--c-primary);
+    text-decoration: none;
+}
+
+a:hover {
+    text-decoration: underline;
+}
+
+code {
+    background: var(--c-bg-2);
+    padding: 0.1em 0.3em;
+    border-radius: 4px;
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.9em;
+}
+
+/* Pantalla de carga */
+.loading-screen {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+    align-items: center;
+    justify-content: center;
+    height: 100vh;
+    color: var(--c-text-dim);
+}
+
+.spinner {
+    width: 48px;
+    height: 48px;
+    border: 4px solid var(--c-bg-3);
+    border-top-color: var(--c-primary);
+    border-radius: 50%;
+    animation: spin 0.9s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+
+/* Utilidades */
+.hidden  { display: none !important; }
+.flex    { display: flex; }
+.col     { flex-direction: column; }
+.gap-05  { gap: 0.5rem; }
+.gap-1   { gap: 1rem; }
+.gap-2   { gap: 2rem; }
+.center  { align-items: center; justify-content: center; }
+.grow    { flex: 1; }
+.text-c  { text-align: center; }
+.text-dim{ color: var(--c-text-dim); }
+.small   { font-size: 0.85em; }
