@@ -42,6 +42,9 @@
 .btn--warning { background: var(--c-warning); color: #111; }
 .btn--warning:hover:not(:disabled) { background: #d97706; }
 
+.btn--primary { background: var(--c-primary); }
+.btn--primary:hover:not(:disabled) { background: var(--c-primary-2); }
+
 .btn--big {
     min-height: 60px;
     font-size: 1.15rem;

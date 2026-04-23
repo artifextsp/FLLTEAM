@@ -55,17 +55,39 @@ const ModuloRankings = (() => {
     }
 
     async function cargar(equipoId) {
-        // Stats de jugadores (vía vista)
-        const stats = await ApiJugadores.estadisticas(equipoId);
+        const [stats, partidas, jugadores, cuadrillas, duplas] = await Promise.all([
+            ApiJugadores.estadisticas(equipoId),
+            ApiPartidas.listar(equipoId, 500),
+            ApiJugadores.listar(equipoId),
+            ApiCuadrillas.listar(equipoId),
+            ApiDuplas.listar(equipoId),
+        ]);
 
         pintarGeneral(stats);
         pintarBase(stats, "azul");
         pintarBase(stats, "roja");
 
-        // Para cuadrillas y duplas traemos las partidas finalizadas del equipo.
-        const partidas = await ApiPartidas.listar(equipoId, 500);
-        pintarCuadrillas(partidas);
-        pintarDuplas(partidas);
+        // Mapas id → nombre para resolver integrantes de cuadrillas y duplas.
+        const nombrePorJugador = Object.fromEntries(
+            jugadores.map((j) => [j.id, j.nombre])
+        );
+
+        // Mapa nombre → array de nombres de integrantes, por tipo.
+        const integrantesCuadrilla = {};
+        cuadrillas.forEach((c) => {
+            integrantesCuadrilla[c.nombre.trim()] = [
+                c.jugador1_id, c.jugador2_id, c.jugador3_id, c.jugador4_id,
+            ].map((id) => nombrePorJugador[id]).filter(Boolean);
+        });
+
+        const integrantesDupla = {};
+        duplas.forEach((d) => {
+            integrantesDupla[d.nombre.trim()] = [d.jugador_a_id, d.jugador_b_id]
+                .map((id) => nombrePorJugador[id]).filter(Boolean);
+        });
+
+        pintarCuadrillas(partidas, integrantesCuadrilla);
+        pintarDuplas(partidas, integrantesDupla);
     }
 
     function pintarGeneral(stats) {
@@ -101,7 +123,15 @@ const ModuloRankings = (() => {
                 </tr>`).join("");
     }
 
-    function pintarCuadrillas(partidas) {
+    /** Devuelve la representación "Nombre (m1, m2, …)" si hay integrantes. */
+    function etiquetaConIntegrantes(nombre, integrantes) {
+        const safeNombre = escapeHtml(nombre);
+        if (!integrantes || integrantes.length === 0) return safeNombre;
+        const lista = integrantes.map(escapeHtml).join(", ");
+        return `${safeNombre} <span class="text-dim small">(${lista})</span>`;
+    }
+
+    function pintarCuadrillas(partidas, integrantesCuadrilla) {
         const mapa = {};
         partidas.forEach((p) => {
             const k = p.cuadrilla_nombre?.trim();
@@ -122,15 +152,14 @@ const ModuloRankings = (() => {
             : filas.map((f, i) => `
                 <tr>
                     <td>${i + 1}</td>
-                    <td>${escapeHtml(f.nombre)}</td>
+                    <td>${etiquetaConIntegrantes(f.nombre, integrantesCuadrilla[f.nombre])}</td>
                     <td>${f.partidas}</td>
                     <td><strong>${f.total}</strong></td>
                     <td>${f.promedio}</td>
                 </tr>`).join("");
     }
 
-    function pintarDuplas(partidas) {
-        // Contamos por (nombre, base) — una dupla se identifica por su base.
+    function pintarDuplas(partidas, integrantesDupla) {
         const mapa = {};
         partidas.forEach((p) => {
             if (p.dupla_azul_nombre?.trim()) {
@@ -152,7 +181,7 @@ const ModuloRankings = (() => {
             : filas.map((f, i) => `
                 <tr>
                     <td>${i + 1}</td>
-                    <td>${escapeHtml(f.nombre)}</td>
+                    <td>${etiquetaConIntegrantes(f.nombre, integrantesDupla[f.nombre])}</td>
                     <td><span class="chip chip--${f.base}">${f.base}</span></td>
                     <td>${f.partidas}</td>
                     <td><strong>${f.total}</strong></td>

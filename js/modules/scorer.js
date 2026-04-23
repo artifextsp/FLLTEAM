@@ -5,9 +5,15 @@
 //   - Cronómetro descendente 2:30 dominante y centrado.
 //   - Drag & drop (mouse + touch) de jugadores a Base Azul / Roja.
 //   - Toggles por misión (completada / fallada) + bonus por misión.
+//     Los bonus pueden activarse independientemente para soportar
+//     misiones "c/u" (puntos_base=0 + varios chips de bonus).
 //   - Cuadrilla y duplas opcionales (con nombre libre).
-//   - Botones: Iniciar, Finalizar, Descartar, Repetir.
-//   - Guarda partida completa al finalizar (cabecera + jugadores + misiones)
+//   - Botones: Iniciar, Finalizar, Repetir, Descartar.
+//   - AL FINALIZAR: la partida NO se guarda automáticamente; se muestra
+//     un botón "Registrar" que el coach debe presionar para enviar la
+//     partida a la base de datos. Entre finalizar y registrar el coach
+//     puede ajustar misiones/bonus.
+//   - Guarda partida completa al registrar (cabecera + jugadores + misiones)
 //     repartiendo el puntaje total equitativamente entre los 4 jugadores
 //     (2 por base); tambien se registra el puntaje total con base.
 // =====================================================================
@@ -54,6 +60,8 @@ const ModuloScorer = (() => {
             restante: 150,
             partidaEnCurso: false,
             partidaIniciada: false,
+            partidaFinalizada: false,  // true tras finalizar, esperando Registrar
+            partidaRegistrada: false,  // true tras guardar correctamente en BD
             inicio: null,
             // Metadatos opcionales
             cuadrillaNombre: "",
@@ -100,6 +108,7 @@ const ModuloScorer = (() => {
                         <div class="cronometro-acciones">
                             <button class="btn btn--success btn--big" id="btn-iniciar">▶ Iniciar</button>
                             <button class="btn btn--warning"        id="btn-finalizar" disabled>■ Finalizar</button>
+                            <button class="btn btn--primary btn--big" id="btn-registrar" hidden>💾 Registrar</button>
                             <button class="btn btn--ghost"          id="btn-repetir">↻ Repetir</button>
                             <button class="btn btn--danger"         id="btn-descartar">✕ Descartar</button>
                         </div>
@@ -149,6 +158,7 @@ const ModuloScorer = (() => {
     function conectarEventos(cont) {
         cont.querySelector("#btn-iniciar").addEventListener("click", iniciarPartida);
         cont.querySelector("#btn-finalizar").addEventListener("click", () => finalizarPartida(false));
+        cont.querySelector("#btn-registrar").addEventListener("click", registrarPartida);
         cont.querySelector("#btn-repetir").addEventListener("click", repetirPartida);
         cont.querySelector("#btn-descartar").addEventListener("click", descartarPartida);
 
@@ -362,11 +372,14 @@ const ModuloScorer = (() => {
         el.className = "mision-tarjeta";
         el.dataset.misionId = m.id;
 
+        const maxMision = (m.puntos_base || 0) +
+            (Array.isArray(m.bonus) ? m.bonus.reduce((s, b) => s + (b.puntos || 0), 0) : 0);
+
         el.innerHTML = `
             <div class="mision-head">
                 <span class="codigo">${escapeHtml(m.codigo)}</span>
                 <span class="titulo">${escapeHtml(m.nombre_es)}</span>
-                <span class="puntos">${m.puntos_base} pt</span>
+                <span class="puntos" title="Puntaje máximo posible">hasta ${maxMision} pt</span>
             </div>
             ${m.descripcion ? `<div class="text-dim small">${escapeHtml(m.descripcion)}</div>` : ""}
             <div class="mision-actions">
@@ -390,31 +403,34 @@ const ModuloScorer = (() => {
         // Estado visual inicial
         aplicarEstadoMision(el, m, prog);
 
-        // Toggles completada / fallada
         el.querySelectorAll(".toggle-btn").forEach((b) => {
             b.addEventListener("click", () => {
-                if (!state.partidaIniciada) {
+                if (!puedeEditarMisiones()) {
                     toast("Inicia la partida para marcar misiones", "info");
                     return;
                 }
                 const accion = b.dataset.accion; // 'ok' | 'fail'
                 const nuevo  = prog.estado === accion ? null : accion;
                 prog.estado = nuevo;
-                if (nuevo !== "ok") prog.bonus.clear();
+                // Al marcar "fallada" se descartan los bonus; al completar o
+                // limpiar, los bonus se mantienen para permitir ajustes.
+                if (nuevo === "fail") prog.bonus.clear();
                 aplicarEstadoMision(el, m, prog);
                 actualizarScoreTotal();
             });
         });
 
-        // Bonus (solo activos si la misión está completada)
+        // Los bonus son independientes del estado "completada" para
+        // soportar misiones tipo "c/u" (puntos_base=0). Solo se bloquean
+        // si la misión fue marcada explícitamente como fallada.
         el.querySelectorAll(".bonus-chip").forEach((c) => {
             c.addEventListener("click", () => {
-                if (!state.partidaIniciada) {
+                if (!puedeEditarMisiones()) {
                     toast("Inicia la partida para marcar bonus", "info");
                     return;
                 }
-                if (prog.estado !== "ok") {
-                    toast("Marca la misión como completada antes de aplicar bonus", "info");
+                if (prog.estado === "fail") {
+                    toast("La misión está marcada como fallada — desmárcala para sumar bonus", "info");
                     return;
                 }
                 const cod = c.dataset.bonus;
@@ -446,12 +462,21 @@ const ModuloScorer = (() => {
     // --------------------------------------------------------------
     function puntajePorMision(m) {
         const prog = state.progresoMisiones[m.id];
-        if (!prog || prog.estado !== "ok") return 0;
-        let total = m.puntos_base || 0;
+        if (!prog) return 0;
+        if (prog.estado === "fail") return 0;
+        let total = 0;
+        if (prog.estado === "ok") total += (m.puntos_base || 0);
         (m.bonus || []).forEach((b) => {
             if (prog.bonus.has(b.codigo)) total += (b.puntos || 0);
         });
         return total;
+    }
+
+    /** Permite editar misiones tanto durante la partida como después de
+     *  finalizar (antes de registrar), pero no una vez registrada. */
+    function puedeEditarMisiones() {
+        if (state.partidaRegistrada) return false;
+        return state.partidaIniciada || state.partidaFinalizada;
     }
 
     function puntajeTotal() {
@@ -471,14 +496,17 @@ const ModuloScorer = (() => {
             toast("Debes asignar 2 jugadores a cada base antes de iniciar", "error");
             return;
         }
-        state.partidaIniciada = true;
-        state.partidaEnCurso  = true;
-        state.restante        = state.duracion;
-        state.inicio          = new Date();
+        state.partidaIniciada   = true;
+        state.partidaEnCurso    = true;
+        state.partidaFinalizada = false;
+        state.partidaRegistrada = false;
+        state.restante          = state.duracion;
+        state.inicio            = new Date();
 
         document.getElementById("scorer").classList.remove("scorer--inactivo");
-        document.getElementById("btn-iniciar").disabled = true;
+        document.getElementById("btn-iniciar").disabled   = true;
         document.getElementById("btn-finalizar").disabled = false;
+        document.getElementById("btn-registrar").hidden   = true;
         document.getElementById("crono-estado").textContent = "PARTIDA EN CURSO";
 
         // Tick cada 200ms para suavidad visual, pero solo actualiza al segundo
@@ -510,21 +538,55 @@ const ModuloScorer = (() => {
         }
     }
 
-    async function finalizarPartida(porTiempo) {
+    /**
+     * Finaliza la partida (por tiempo agotado o pulsación del coach).
+     * NO guarda automáticamente: solo detiene el cronómetro y activa el
+     * botón "Registrar" para que el coach decida cuándo persistir.
+     */
+    function finalizarPartida(porTiempo) {
         if (!state.partidaIniciada) return;
         detenerTimer();
-        state.partidaEnCurso = false;
+        state.partidaEnCurso    = false;
+        state.partidaFinalizada = true;
         document.getElementById("crono-estado").textContent =
-            porTiempo ? "TIEMPO AGOTADO" : "PARTIDA FINALIZADA";
+            porTiempo ? "TIEMPO AGOTADO — Revisa y pulsa Registrar" : "PARTIDA FINALIZADA — Pulsa Registrar";
         document.getElementById("btn-finalizar").disabled = true;
-        document.getElementById("btn-iniciar").disabled   = false;
+        document.getElementById("btn-iniciar").disabled   = true;
+        document.getElementById("btn-registrar").hidden   = false;
+        toast(`Partida finalizada (${puntajeTotal()} pts). Ajusta y pulsa Registrar`, "info");
+    }
 
+    /**
+     * Confirma y envía la partida a la base de datos. Solo disponible
+     * tras finalizar; deja la interfaz en estado "registrada" para
+     * consulta. El coach puede iniciar otra partida con Repetir / Descartar.
+     */
+    async function registrarPartida() {
+        if (state.partidaRegistrada) {
+            toast("Esta partida ya fue registrada", "info");
+            return;
+        }
+        if (!state.partidaFinalizada) {
+            toast("Finaliza la partida antes de registrar", "info");
+            return;
+        }
+        const btn = document.getElementById("btn-registrar");
+        btn.disabled = true;
+        const textoOriginal = btn.textContent;
+        btn.textContent = "Guardando…";
         try {
             await guardarPartida("finalizada");
-            toast(`Partida guardada (${puntajeTotal()} pts)`, "success");
+            state.partidaRegistrada = true;
+            toast(`Partida registrada (${puntajeTotal()} pts)`, "success");
+            document.getElementById("crono-estado").textContent = "PARTIDA REGISTRADA";
+            btn.textContent = "✓ Registrada";
+            // Tras registrar, habilitar inicio de una nueva partida.
+            document.getElementById("btn-iniciar").disabled = false;
         } catch (err) {
             console.error(err);
-            toast(err.message || "No se pudo guardar la partida", "error");
+            toast(err.message || "No se pudo registrar la partida", "error");
+            btn.disabled = false;
+            btn.textContent = textoOriginal;
         }
     }
 
@@ -533,13 +595,23 @@ const ModuloScorer = (() => {
             const ok = await confirmar("¿Reiniciar la partida en curso SIN guardar?");
             if (!ok) return;
         }
+        if (state.partidaFinalizada && !state.partidaRegistrada) {
+            const ok = await confirmar("Hay una partida finalizada sin registrar. ¿Deseas descartarla y reiniciar?");
+            if (!ok) return;
+        }
         detenerTimer();
-        state.partidaEnCurso  = false;
-        state.partidaIniciada = false;
-        state.restante        = state.duracion;
+        state.partidaEnCurso    = false;
+        state.partidaIniciada   = false;
+        state.partidaFinalizada = false;
+        state.partidaRegistrada = false;
+        state.restante          = state.duracion;
         state.misiones.forEach((m) => {
             state.progresoMisiones[m.id] = { estado: null, bonus: new Set() };
         });
+        const btnRegistrar = document.getElementById("btn-registrar");
+        btnRegistrar.hidden   = true;
+        btnRegistrar.disabled = false;
+        btnRegistrar.textContent = "💾 Registrar";
         document.getElementById("btn-iniciar").disabled   = false;
         document.getElementById("btn-finalizar").disabled = true;
         document.getElementById("crono-estado").textContent = "Partida detenida";
@@ -551,9 +623,11 @@ const ModuloScorer = (() => {
         const ok = await confirmar("¿Descartar esta partida? No se guardará.");
         if (!ok) return;
         detenerTimer();
-        state.partidaEnCurso  = false;
-        state.partidaIniciada = false;
-        state.restante        = state.duracion;
+        state.partidaEnCurso    = false;
+        state.partidaIniciada   = false;
+        state.partidaFinalizada = false;
+        state.partidaRegistrada = false;
+        state.restante          = state.duracion;
         state.misiones.forEach((m) => {
             state.progresoMisiones[m.id] = { estado: null, bonus: new Set() };
         });
@@ -565,6 +639,10 @@ const ModuloScorer = (() => {
         document.getElementById("in-cuadrilla").value = "";
         document.getElementById("in-dupla-azul").value = "";
         document.getElementById("in-dupla-roja").value = "";
+        const btnRegistrar = document.getElementById("btn-registrar");
+        btnRegistrar.hidden   = true;
+        btnRegistrar.disabled = false;
+        btnRegistrar.textContent = "💾 Registrar";
         document.getElementById("btn-iniciar").disabled   = false;
         document.getElementById("btn-finalizar").disabled = true;
         document.getElementById("crono-estado").textContent = "Partida detenida";
