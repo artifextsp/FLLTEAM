@@ -13,6 +13,7 @@
     Router.registrar("equipos",   ModuloEquipos);
     Router.registrar("jugadores", ModuloJugadores);
     Router.registrar("misiones",  ModuloMisiones);
+    Router.registrar("lanzadas",  ModuloLanzadas);
     Router.registrar("rankings",  ModuloRankings);
     Router.registrar("analisis",  ModuloAnalisis);
 

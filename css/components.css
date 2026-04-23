@@ -201,6 +201,18 @@ input:focus, select:focus, textarea:focus {
 
 .chip--azul  { background: var(--c-base-azul);  color: #fff; }
 .chip--roja  { background: var(--c-base-roja);  color: #fff; }
+.chip--xs    { padding: 0.1rem 0.4rem; font-size: 0.72rem; }
+
+.badge {
+    display: inline-block;
+    padding: 0.15rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+.badge--bueno  { background: rgba(34,197,94,0.18);  color: #86efac; }
+.badge--medio  { background: rgba(245,158,11,0.18); color: #fcd34d; }
+.badge--malo   { background: rgba(239,68,68,0.18);  color: #fca5a5; }
 
 /* ----------------------- TABLAS ----------------------- */
 .tabla {

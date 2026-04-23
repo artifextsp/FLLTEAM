@@ -14,10 +14,36 @@ const ModuloAnalisis = (() => {
         }
 
         cont.innerHTML = `
-            <div class="page-header"><h2>Análisis de Misiones</h2></div>
+            <div class="page-header"><h2>Análisis</h2></div>
 
             <div class="card">
-                <h3>Efectividad por misión</h3>
+                <h3>🚀 Efectividad por lanzada (recorrido)</h3>
+                <p class="text-dim small">
+                    Puntos y efectividad agregados de todas las misiones que
+                    componen cada lanzada. Ordenado por promedio de puntos por partida.
+                </p>
+                <div class="tabla-wrap">
+                    <table class="tabla tabla--compact" id="tbl-lanzadas">
+                        <thead>
+                            <tr>
+                                <th>Lanzada</th>
+                                <th>Posición</th>
+                                <th>Misiones</th>
+                                <th>Partidas</th>
+                                <th>Intentos</th>
+                                <th>Completadas</th>
+                                <th>Efectividad</th>
+                                <th>Puntos totales</th>
+                                <th>Prom. / partida</th>
+                            </tr>
+                        </thead>
+                        <tbody></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <h3>🧩 Efectividad por misión</h3>
                 <div class="tabla-wrap">
                     <table class="tabla tabla--compact" id="tbl-efectividad">
                         <thead>
@@ -54,12 +80,15 @@ const ModuloAnalisis = (() => {
     }
 
     async function cargar(equipoId) {
-        const [efec, tend, misiones] = await Promise.all([
+        const [efec, tend, misiones, efecLanzadas, lanzadas] = await Promise.all([
             ApiMisiones.efectividad(),                   // vista
             ApiPartidas.tendenciaPorMision(equipoId),
             ApiMisiones.listar(),
+            ApiLanzadas.efectividad(equipoId),
+            ApiLanzadas.listar(equipoId),
         ]);
 
+        pintarEfectividadLanzadas(efecLanzadas, lanzadas, misiones);
         pintarEfectividad(efec, misiones);
 
         const sel = document.getElementById("sel-mision");
@@ -70,6 +99,53 @@ const ModuloAnalisis = (() => {
         if (misiones.length) pintarTendencia(misiones[0].id, tend);
 
         pintarAlertasBajas(efec, tend, misiones);
+    }
+
+    function pintarEfectividadLanzadas(efec, lanzadas, misiones) {
+        const misById = Object.fromEntries(misiones.map((m) => [m.id, m]));
+        const enlacesPorLan = {};
+        lanzadas.forEach((l) => {
+            enlacesPorLan[l.id] = (l.misiones || []).map((mm) => misById[mm.mision_id]).filter(Boolean);
+        });
+
+        const filas = [...efec].sort(
+            (a, b) => (b.promedio_puntos_por_partida || 0) -
+                      (a.promedio_puntos_por_partida || 0)
+        );
+
+        const tbody = document.querySelector("#tbl-lanzadas tbody");
+        if (filas.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="9" class="text-dim text-c">
+                No hay lanzadas configuradas. Créalas en la pestaña
+                <a href="#lanzadas">Lanzadas</a>.
+            </td></tr>`;
+            return;
+        }
+
+        tbody.innerHTML = filas.map((f) => {
+            const posTxt = f.orientacion
+                ? `${escapeHtml(f.orientacion)} · #${f.numero_posicion ?? "-"} ·
+                   ${f.direccion === "izq_der" ? "izq→der" : "der→izq"}`
+                : `<span class="text-dim small">Sin posición</span>`;
+            const misionesList = (enlacesPorLan[f.lanzada_id] || [])
+                .map((m) => `<span class="chip chip--xs">${escapeHtml(m.codigo)}</span>`)
+                .join(" ") || `<span class="text-dim small">sin misiones</span>`;
+            const efPct = Number(f.efectividad_pct || 0);
+            const claseEf = efPct < 50 ? "badge--malo"
+                        : efPct < 75   ? "badge--medio"
+                                       : "badge--bueno";
+            return `<tr>
+                <td><strong>${escapeHtml(f.nombre)}</strong></td>
+                <td class="small">${posTxt}</td>
+                <td>${misionesList}</td>
+                <td>${f.partidas_registradas || 0}</td>
+                <td>${f.intentos_totales || 0}</td>
+                <td>${f.completadas || 0}</td>
+                <td><span class="badge ${claseEf}">${efPct}%</span></td>
+                <td><strong>${f.puntos_totales || 0}</strong></td>
+                <td><strong>${f.promedio_puntos_por_partida || 0}</strong></td>
+            </tr>`;
+        }).join("");
     }
 
     function pintarEfectividad(efec, misiones) {

@@ -39,17 +39,24 @@ const ModuloScorer = (() => {
         }
 
         // Cargar datos base en paralelo
-        const [jugadores, misiones, posiciones] = await Promise.all([
+        const [jugadores, misiones, lanzadas] = await Promise.all([
             ApiJugadores.listar(equipoId),
             ApiMisiones.listar(),
-            ApiPosiciones.listarPorEquipo(equipoId),
+            ApiLanzadas.listar(equipoId),
         ]);
+
+        // Mapa mision_id → lanzada (para mostrar en cada tarjeta)
+        const lanzadaPorMision = {};
+        lanzadas.forEach((l) => {
+            l.misiones.forEach((mm) => { lanzadaPorMision[mm.mision_id] = l; });
+        });
 
         state = {
             equipoId,
             jugadores,
             misiones,
-            posiciones,
+            lanzadas,
+            lanzadaPorMision,
             // Asignaciones
             baseAzul: [],          // array de jugador_id (máx 2)
             baseRoja: [],
@@ -365,8 +372,8 @@ const ModuloScorer = (() => {
     }
 
     function crearTarjetaMision(m) {
-        const prog = state.progresoMisiones[m.id];
-        const pos  = state.posiciones[m.id];
+        const prog    = state.progresoMisiones[m.id];
+        const lanzada = state.lanzadaPorMision[m.id];
 
         const el = document.createElement("div");
         el.className = "mision-tarjeta";
@@ -393,10 +400,14 @@ const ModuloScorer = (() => {
                          +${b.puntos} ${escapeHtml(b.nombre)}
                        </button>`).join("") +
                   `</div>` : ""}
-            ${pos
-                ? `<div class="mision-posicion">📍 Pos: ${escapeHtml(pos.orientacion)}
-                    ${pos.numero ?? "-"} · ${escapeHtml(pos.direccion)}</div>`
-                : `<div class="mision-posicion text-dim">Sin posición registrada</div>`
+            ${lanzada
+                ? `<div class="mision-posicion">🚀 ${escapeHtml(lanzada.nombre)}${
+                    lanzada.orientacion
+                        ? ` · ${escapeHtml(lanzada.orientacion)} · #${lanzada.numero_posicion ?? "-"} · ${
+                            lanzada.direccion === "izq_der" ? "izq→der" : "der→izq"}`
+                        : ""
+                  }</div>`
+                : `<div class="mision-posicion text-dim">Sin lanzada asignada</div>`
             }
         `;
 

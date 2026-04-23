@@ -47,7 +47,7 @@
 /* ---------------- NAVEGACIÓN INFERIOR (móvil) ---------------- */
 .app-nav {
     display: grid;
-    grid-template-columns: repeat(6, 1fr);
+    grid-template-columns: repeat(7, 1fr);
     background: var(--c-bg-2);
     border-top: 1px solid var(--c-bg-3);
     position: sticky;

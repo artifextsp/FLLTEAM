@@ -1,6 +1,8 @@
 // =====================================================================
-//  Módulo MISIONES - Listado de misiones de la temporada + edición
-//  de la posición de lanzamiento por equipo.
+//  Módulo MISIONES — listado de misiones de la temporada (solo lectura).
+//  Muestra a qué LANZADA pertenece cada misión para el equipo activo.
+//  La posición de lanzamiento se configura por lanzada en el módulo
+//  "Lanzadas".
 // =====================================================================
 
 const ModuloMisiones = (() => {
@@ -11,9 +13,13 @@ const ModuloMisiones = (() => {
             <div class="page-header">
                 <h2>Misiones · UNEARTHED</h2>
                 <div class="acciones text-dim small">
-                    Las misiones se editan desde la base de datos (tabla <code>misiones</code>).
+                    Edición en la base de datos (tabla <code>misiones</code>).
                 </div>
             </div>
+            <p class="text-dim small">
+                Las posiciones de lanzamiento se configuran por
+                <a href="#lanzadas">lanzada</a>, no por misión individual.
+            </p>
             <div class="card">
                 <div class="tabla-wrap">
                     <table class="tabla" id="tabla-misiones">
@@ -23,8 +29,7 @@ const ModuloMisiones = (() => {
                                 <th>Nombre</th>
                                 <th>Base</th>
                                 <th>Bonus</th>
-                                <th>Posición</th>
-                                <th></th>
+                                <th>Lanzada</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -32,22 +37,38 @@ const ModuloMisiones = (() => {
                 </div>
             </div>`;
 
-        const [misiones, posiciones] = await Promise.all([
+        const [misiones, lanzadas] = await Promise.all([
             ApiMisiones.listar(),
-            equipoId ? ApiPosiciones.listarPorEquipo(equipoId) : Promise.resolve({}),
+            equipoId ? ApiLanzadas.listar(equipoId) : Promise.resolve([]),
         ]);
+
+        // Mapa mision_id → lanzada (nombre + posición resumida)
+        const mapa = {};
+        lanzadas.forEach((l) => {
+            l.misiones.forEach((mm) => { mapa[mm.mision_id] = l; });
+        });
 
         const tbody = document.querySelector("#tabla-misiones tbody");
         if (misiones.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="6" class="text-dim text-c">
+            tbody.innerHTML = `<tr><td colspan="5" class="text-dim text-c">
                 No hay misiones cargadas. Ejecuta <code>sql/02_seed_unearthed.sql</code>.
             </td></tr>`;
             return;
         }
 
         misiones.forEach((m) => {
-            const pos = posiciones[m.id];
-            const tr  = document.createElement("tr");
+            const l = mapa[m.id];
+            const posTxt = l
+                ? `<strong>${escapeHtml(l.nombre)}</strong>` +
+                  (l.orientacion
+                      ? ` <span class="text-dim small">
+                             (${escapeHtml(l.orientacion)} · #${l.numero_posicion ?? "-"} ·
+                              ${l.direccion === "izq_der" ? "izq→der" : "der→izq"})
+                          </span>`
+                      : "")
+                : `<span class="text-dim small">Sin asignar</span>`;
+
+            const tr = document.createElement("tr");
             tr.innerHTML = `
                 <td><code>${escapeHtml(m.codigo)}</code></td>
                 <td>
@@ -58,62 +79,13 @@ const ModuloMisiones = (() => {
                 <td>${(m.bonus || []).map((b) =>
                     `<span class="chip">+${b.puntos} ${escapeHtml(b.nombre)}</span>`
                 ).join(" ")}</td>
-                <td>${pos
-                    ? `${escapeHtml(pos.orientacion)} · ${pos.numero ?? "-"} · ${escapeHtml(pos.direccion)}`
-                    : `<span class="text-dim small">Sin definir</span>`}</td>
-                <td>
-                    <button class="btn btn--ghost btn--icon"
-                            data-mision="${m.id}" title="Editar posición"
-                            ${equipoId ? "" : "disabled"}>📍</button>
-                </td>`;
-            tr.querySelector("button").addEventListener("click", () =>
-                editarPosicion(equipoId, m, pos)
-            );
+                <td>${posTxt}</td>`;
             tbody.appendChild(tr);
         });
 
         if (!equipoId) {
-            toast("Selecciona un equipo para editar posiciones", "info");
+            toast("Selecciona un equipo para ver sus lanzadas asociadas", "info");
         }
-    }
-
-    async function editarPosicion(equipoId, mision, pos) {
-        if (!equipoId) { toast("Selecciona un equipo primero", "error"); return; }
-        const html = `
-            <div class="form-field">
-                <label>Orientación</label>
-                <select id="f-orient">
-                    <option value="horizontal" ${pos?.orientacion === "horizontal" ? "selected" : ""}>Horizontal</option>
-                    <option value="vertical"   ${pos?.orientacion === "vertical"   ? "selected" : ""}>Vertical</option>
-                </select>
-            </div>
-            <div class="form-field">
-                <label>Número identificador (del equipo)</label>
-                <input type="number" id="f-num" value="${pos?.numero ?? ""}" />
-            </div>
-            <div class="form-field">
-                <label>Dirección</label>
-                <select id="f-dir">
-                    <option value="izq_der" ${pos?.direccion === "izq_der" ? "selected" : ""}>Izquierda → Derecha</option>
-                    <option value="der_izq" ${pos?.direccion === "der_izq" ? "selected" : ""}>Derecha → Izquierda</option>
-                </select>
-            </div>`;
-        await abrirModal(`Posición · ${mision.codigo} ${mision.nombre_es}`, html, {
-            okTexto: "Guardar",
-            onSubmit: async (body) => {
-                const orientacion = body.querySelector("#f-orient").value;
-                const direccion   = body.querySelector("#f-dir").value;
-                const numVal      = body.querySelector("#f-num").value;
-                const numero      = numVal === "" ? null : parseInt(numVal, 10);
-                await ApiPosiciones.guardar({
-                    equipo_id: equipoId,
-                    mision_id: mision.id,
-                    orientacion, numero, direccion,
-                });
-                toast("Posición guardada", "success");
-                Router.navegar();
-            },
-        });
     }
 
     return { render };
