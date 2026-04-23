@@ -61,8 +61,11 @@ const ModuloMisiones = (() => {
             const baseChip = l?.base
                 ? ` <span class="chip chip--${l.base} chip--xs">${l.base === "azul" ? "Azul" : "Roja"}</span>`
                 : "";
+            const tiempoTxt = l?.tiempo_recorrido_seg > 0
+                ? ` <span class="text-dim small">⏱ ${formatearTiempo(l.tiempo_recorrido_seg)}</span>`
+                : "";
             const posTxt = l
-                ? `<strong>${escapeHtml(l.nombre)}</strong>${baseChip}` +
+                ? `<strong>${escapeHtml(l.nombre)}</strong>${baseChip}${tiempoTxt}` +
                   (l.orientacion
                       ? ` <span class="text-dim small">
                              (${escapeHtml(l.orientacion)} · #${l.numero_posicion ?? "-"} ·

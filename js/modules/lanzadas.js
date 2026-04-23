@@ -1,8 +1,9 @@
 // =====================================================================
 //  Módulo LANZADAS — recorridos del equipo (agrupación de misiones)
 //  ------------------------------------------------------------------
-//  Flujo: el coach crea lanzadas (recorridos) con su posición de
-//  lanzamiento (orientación, número, dirección) y arrastra las misiones
+//  Flujo: el coach crea lanzadas (recorridos) con base, tiempo del
+//  recorrido en segundos, posición de lanzamiento (orientación, número,
+//  dirección) y arrastra las misiones
 //  desde el panel "Disponibles" hacia cada lanzada. Una misión puede
 //  pertenecer a una sola lanzada por equipo (garantizado por DB).
 //
@@ -34,8 +35,9 @@ const ModuloLanzadas = (() => {
                 </div>
             </div>
             <p class="text-dim small">
-                Crea un recorrido y arrastra las misiones que lo componen.
-                Una misión solo puede estar en una lanzada por equipo.
+                Cada lanzada guarda el tiempo que lleva el recorrido (segundos)
+                para comparar y optimizar. Arrastra las misiones que lo componen;
+                una misión solo puede estar en una lanzada por equipo.
             </p>
             <div class="lanzadas-layout">
                 <aside class="lanzadas-disponibles card" id="panel-disponibles">
@@ -124,6 +126,9 @@ const ModuloLanzadas = (() => {
         const chipBase = l.base
             ? `<span class="chip chip--${l.base}">${l.base === "azul" ? "🟦 Base Azul" : "🟥 Base Roja"}</span>`
             : `<span class="chip">Base sin definir</span>`;
+        const chipTiempo = (l.tiempo_recorrido_seg != null && l.tiempo_recorrido_seg > 0)
+            ? `<span class="chip" title="Tiempo planificado del recorrido">⏱ ${formatearTiempo(l.tiempo_recorrido_seg)} <span class="text-dim">(${l.tiempo_recorrido_seg}s)</span></span>`
+            : `<span class="chip text-dim">⏱ Sin tiempo</span>`;
 
         card.innerHTML = `
             <div class="lanzada-head">
@@ -131,6 +136,7 @@ const ModuloLanzadas = (() => {
                     <h3 style="margin:0;">${escapeHtml(l.nombre)}</h3>
                     <div class="lanzada-chips">
                         ${chipBase}
+                        ${chipTiempo}
                     </div>
                     <div class="text-dim small">${posTexto}</div>
                     ${l.descripcion ? `<div class="text-dim small">${escapeHtml(l.descripcion)}</div>` : ""}
@@ -298,6 +304,11 @@ const ModuloLanzadas = (() => {
                     toast("Selecciona la base de salida", "error");
                     return false;
                 }
+                if (campos.tiempo_recorrido_seg == null || !Number.isFinite(campos.tiempo_recorrido_seg)
+                    || campos.tiempo_recorrido_seg < 1) {
+                    toast("Indica el tiempo del recorrido en segundos (número entero, mín. 1)", "error");
+                    return false;
+                }
                 await ApiLanzadas.crear({
                     equipo_id: state.equipoId,
                     ...campos,
@@ -321,6 +332,11 @@ const ModuloLanzadas = (() => {
                 }
                 if (!campos.base) {
                     toast("Selecciona la base de salida", "error");
+                    return false;
+                }
+                if (campos.tiempo_recorrido_seg == null || !Number.isFinite(campos.tiempo_recorrido_seg)
+                    || campos.tiempo_recorrido_seg < 1) {
+                    toast("Indica el tiempo del recorrido en segundos (número entero, mín. 1)", "error");
                     return false;
                 }
                 await ApiLanzadas.actualizar(l.id, campos);
@@ -372,6 +388,15 @@ const ModuloLanzadas = (() => {
                     <option value="roja" ${l.base === "roja" ? "selected" : ""}>🟥 Base Roja</option>
                 </select>
             </div>
+            <div class="form-field">
+                <label for="f-tiempo">Tiempo del recorrido (segundos) *</label>
+                <input type="number" id="f-tiempo" min="1" step="1"
+                    value="${l.tiempo_recorrido_seg != null ? escapeHtml(String(l.tiempo_recorrido_seg)) : ""}"
+                    placeholder="Ej. 45" />
+                <div class="text-dim small">
+                    Cuánto tarda el equipo en ejecutar esta lanzada en entrenamiento (cronómetro).
+                </div>
+            </div>
             <div class="grid grid-3">
                 <div class="form-field">
                     <label>Orientación</label>
@@ -404,7 +429,9 @@ const ModuloLanzadas = (() => {
         const direccion   = body.querySelector("#f-dir").value || null;
         const numVal      = body.querySelector("#f-num").value;
         const numero_posicion = numVal === "" ? null : parseInt(numVal, 10);
-        return { nombre, descripcion, base, orientacion, direccion, numero_posicion };
+        const tVal        = body.querySelector("#f-tiempo").value.trim();
+        const tiempo_recorrido_seg = tVal === "" ? null : parseInt(tVal, 10);
+        return { nombre, descripcion, base, tiempo_recorrido_seg, orientacion, direccion, numero_posicion };
     }
 
     return { render, destroy };

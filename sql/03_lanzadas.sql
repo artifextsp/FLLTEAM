@@ -28,6 +28,8 @@ create table if not exists public.lanzadas (
     orientacion      text check (orientacion in ('horizontal','vertical')),
     numero_posicion  integer,
     direccion        text check (direccion in ('izq_der','der_izq')),
+    -- Tiempo planificado del recorrido (segundos), para comparar lanzadas
+    tiempo_recorrido_seg integer check (tiempo_recorrido_seg is null or tiempo_recorrido_seg >= 0),
     orden            integer not null default 0,
     activa           boolean not null default true,
     creado_en        timestamptz not null default now(),
@@ -67,6 +69,7 @@ select
     l.equipo_id,
     l.nombre,
     l.base,
+    l.tiempo_recorrido_seg,
     l.orientacion,
     l.numero_posicion,
     l.direccion,
@@ -92,7 +95,7 @@ left join public.partidas_misiones  pm on pm.mision_id  = lm.mision_id
 left join public.partidas           p  on p.id = pm.partida_id
                                       and p.estado = 'finalizada'
                                       and p.equipo_id = l.equipo_id
-group by l.id, l.coach_id, l.equipo_id, l.nombre, l.base,
+group by l.id, l.coach_id, l.equipo_id, l.nombre, l.base, l.tiempo_recorrido_seg,
          l.orientacion, l.numero_posicion, l.direccion, l.orden;
 
 -- =====================================================================

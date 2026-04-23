@@ -19,8 +19,8 @@ const ModuloAnalisis = (() => {
             <div class="card">
                 <h3>🚀 Efectividad por lanzada (recorrido)</h3>
                 <p class="text-dim small">
-                    Puntos y efectividad agregados de todas las misiones que
-                    componen cada lanzada. Ordenado por promedio de puntos por partida.
+                    Incluye el tiempo planificado del recorrido (segundos) para ver
+                    qué lanzadas conviene acortar. Ordenado por promedio de puntos por partida.
                 </p>
                 <div class="tabla-wrap">
                     <table class="tabla tabla--compact" id="tbl-lanzadas">
@@ -28,6 +28,7 @@ const ModuloAnalisis = (() => {
                             <tr>
                                 <th>Lanzada</th>
                                 <th>Base</th>
+                                <th>Tiempo</th>
                                 <th>Posición</th>
                                 <th>Misiones</th>
                                 <th>Partidas</th>
@@ -36,6 +37,7 @@ const ModuloAnalisis = (() => {
                                 <th>Efectividad</th>
                                 <th>Puntos totales</th>
                                 <th>Prom. / partida</th>
+                                <th title="Promedio de puntos por minuto de recorrido planificado">Pt/min</th>
                             </tr>
                         </thead>
                         <tbody></tbody>
@@ -116,7 +118,7 @@ const ModuloAnalisis = (() => {
 
         const tbody = document.querySelector("#tbl-lanzadas tbody");
         if (filas.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="10" class="text-dim text-c">
+            tbody.innerHTML = `<tr><td colspan="12" class="text-dim text-c">
                 No hay lanzadas configuradas. Créalas en la pestaña
                 <a href="#lanzadas">Lanzadas</a>.
             </td></tr>`;
@@ -126,6 +128,15 @@ const ModuloAnalisis = (() => {
         tbody.innerHTML = filas.map((f) => {
             const baseChip = f.base
                 ? `<span class="chip chip--${f.base} chip--xs">${f.base === "azul" ? "Azul" : "Roja"}</span>`
+                : `<span class="text-dim small">—</span>`;
+            const tSeg = f.tiempo_recorrido_seg;
+            const tiempoCell = (tSeg != null && tSeg > 0)
+                ? `<span class="small">${escapeHtml(formatearTiempo(tSeg))}</span>
+                   <div class="text-dim small">${tSeg}s</div>`
+                : `<span class="text-dim small">—</span>`;
+            const prom = Number(f.promedio_puntos_por_partida || 0);
+            const ptMin = (tSeg != null && tSeg > 0)
+                ? `<strong>${(prom * 60 / tSeg).toFixed(1)}</strong>`
                 : `<span class="text-dim small">—</span>`;
             const posTxt = f.orientacion
                 ? `${escapeHtml(f.orientacion)} · #${f.numero_posicion ?? "-"} ·
@@ -141,6 +152,7 @@ const ModuloAnalisis = (() => {
             return `<tr>
                 <td><strong>${escapeHtml(f.nombre)}</strong></td>
                 <td>${baseChip}</td>
+                <td>${tiempoCell}</td>
                 <td class="small">${posTxt}</td>
                 <td>${misionesList}</td>
                 <td>${f.partidas_registradas || 0}</td>
@@ -149,6 +161,7 @@ const ModuloAnalisis = (() => {
                 <td><span class="badge ${claseEf}">${efPct}%</span></td>
                 <td><strong>${f.puntos_totales || 0}</strong></td>
                 <td><strong>${f.promedio_puntos_por_partida || 0}</strong></td>
+                <td>${ptMin}</td>
             </tr>`;
         }).join("");
     }

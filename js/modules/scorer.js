@@ -406,6 +406,10 @@ const ModuloScorer = (() => {
                         ? ` · ${lanzada.base === "azul" ? "🟦 Azul" : "🟥 Roja"}`
                         : ""
                   }${
+                    (lanzada.tiempo_recorrido_seg ?? 0) > 0
+                        ? ` · ⏱ ${formatearTiempo(lanzada.tiempo_recorrido_seg)}`
+                        : ""
+                  }${
                     lanzada.orientacion
                         ? ` · ${escapeHtml(lanzada.orientacion)} · #${lanzada.numero_posicion ?? "-"} · ${
                             lanzada.direccion === "izq_der" ? "izq→der" : "der→izq"}`
