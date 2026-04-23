@@ -121,11 +121,17 @@ const ModuloLanzadas = (() => {
         const posTexto = l.orientacion
             ? `${l.orientacion} · #${l.numero_posicion ?? "-"} · ${l.direccion === "izq_der" ? "izq → der" : "der → izq"}`
             : `<span class="text-dim">Posición sin definir</span>`;
+        const chipBase = l.base
+            ? `<span class="chip chip--${l.base}">${l.base === "azul" ? "🟦 Base Azul" : "🟥 Base Roja"}</span>`
+            : `<span class="chip">Base sin definir</span>`;
 
         card.innerHTML = `
             <div class="lanzada-head">
                 <div>
                     <h3 style="margin:0;">${escapeHtml(l.nombre)}</h3>
+                    <div class="lanzada-chips">
+                        ${chipBase}
+                    </div>
                     <div class="text-dim small">${posTexto}</div>
                     ${l.descripcion ? `<div class="text-dim small">${escapeHtml(l.descripcion)}</div>` : ""}
                 </div>
@@ -288,6 +294,10 @@ const ModuloLanzadas = (() => {
                     toast("El nombre es obligatorio", "error");
                     return false;
                 }
+                if (!campos.base) {
+                    toast("Selecciona la base de salida", "error");
+                    return false;
+                }
                 await ApiLanzadas.crear({
                     equipo_id: state.equipoId,
                     ...campos,
@@ -307,6 +317,10 @@ const ModuloLanzadas = (() => {
                 const campos = leerFormulario(body);
                 if (!campos.nombre) {
                     toast("El nombre es obligatorio", "error");
+                    return false;
+                }
+                if (!campos.base) {
+                    toast("Selecciona la base de salida", "error");
                     return false;
                 }
                 await ApiLanzadas.actualizar(l.id, campos);
@@ -350,6 +364,14 @@ const ModuloLanzadas = (() => {
                 <label>Descripción (opcional)</label>
                 <input type="text" id="f-desc" value="${escapeHtml(l.descripcion || "")}" placeholder="Ej. Ruta este del tapete" />
             </div>
+            <div class="form-field">
+                <label>Base de salida *</label>
+                <select id="f-base">
+                    <option value="">— Selecciona base —</option>
+                    <option value="azul" ${l.base === "azul" ? "selected" : ""}>🟦 Base Azul</option>
+                    <option value="roja" ${l.base === "roja" ? "selected" : ""}>🟥 Base Roja</option>
+                </select>
+            </div>
             <div class="grid grid-3">
                 <div class="form-field">
                     <label>Orientación</label>
@@ -377,11 +399,12 @@ const ModuloLanzadas = (() => {
     function leerFormulario(body) {
         const nombre      = body.querySelector("#f-nombre").value.trim();
         const descripcion = body.querySelector("#f-desc").value.trim() || null;
+        const base        = body.querySelector("#f-base").value || null;
         const orientacion = body.querySelector("#f-orient").value || null;
         const direccion   = body.querySelector("#f-dir").value || null;
         const numVal      = body.querySelector("#f-num").value;
         const numero_posicion = numVal === "" ? null : parseInt(numVal, 10);
-        return { nombre, descripcion, orientacion, direccion, numero_posicion };
+        return { nombre, descripcion, base, orientacion, direccion, numero_posicion };
     }
 
     return { render, destroy };

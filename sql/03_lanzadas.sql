@@ -23,7 +23,8 @@ create table if not exists public.lanzadas (
     equipo_id        uuid not null references public.equipos(id) on delete cascade,
     nombre           text not null,
     descripcion      text,
-    -- Posición de lanzamiento asociada al recorrido
+    -- Base de salida y posición de lanzamiento asociadas al recorrido
+    base             text check (base in ('azul','roja')),
     orientacion      text check (orientacion in ('horizontal','vertical')),
     numero_posicion  integer,
     direccion        text check (direccion in ('izq_der','der_izq')),
@@ -65,6 +66,7 @@ select
     l.coach_id,
     l.equipo_id,
     l.nombre,
+    l.base,
     l.orientacion,
     l.numero_posicion,
     l.direccion,
@@ -90,7 +92,7 @@ left join public.partidas_misiones  pm on pm.mision_id  = lm.mision_id
 left join public.partidas           p  on p.id = pm.partida_id
                                       and p.estado = 'finalizada'
                                       and p.equipo_id = l.equipo_id
-group by l.id, l.coach_id, l.equipo_id, l.nombre,
+group by l.id, l.coach_id, l.equipo_id, l.nombre, l.base,
          l.orientacion, l.numero_posicion, l.direccion, l.orden;
 
 -- =====================================================================

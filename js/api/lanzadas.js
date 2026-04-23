@@ -42,6 +42,7 @@ const ApiLanzadas = {
 
     /** Crea una lanzada nueva; devuelve la fila creada. */
     async crear({ equipo_id, nombre, descripcion = null,
+                  base = null,
                   orientacion = null, numero_posicion = null,
                   direccion = null, orden = 0 }) {
         const user = await FllAuth.usuarioActual();
@@ -50,6 +51,7 @@ const ApiLanzadas = {
             .insert({
                 coach_id: user.id,
                 equipo_id, nombre, descripcion,
+                base,
                 orientacion, numero_posicion, direccion,
                 orden,
             })

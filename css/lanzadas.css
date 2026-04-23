@@ -65,6 +65,13 @@
     align-items: center;
 }
 
+.lanzada-chips {
+    display: flex;
+    gap: 0.35rem;
+    flex-wrap: wrap;
+    margin: 0.25rem 0 0.3rem;
+}
+
 .lanzada-drop {
     list-style: none;
     margin: 0;

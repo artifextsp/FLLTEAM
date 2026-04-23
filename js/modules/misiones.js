@@ -58,8 +58,11 @@ const ModuloMisiones = (() => {
 
         misiones.forEach((m) => {
             const l = mapa[m.id];
+            const baseChip = l?.base
+                ? ` <span class="chip chip--${l.base} chip--xs">${l.base === "azul" ? "Azul" : "Roja"}</span>`
+                : "";
             const posTxt = l
-                ? `<strong>${escapeHtml(l.nombre)}</strong>` +
+                ? `<strong>${escapeHtml(l.nombre)}</strong>${baseChip}` +
                   (l.orientacion
                       ? ` <span class="text-dim small">
                              (${escapeHtml(l.orientacion)} · #${l.numero_posicion ?? "-"} ·

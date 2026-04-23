@@ -27,6 +27,7 @@ const ModuloAnalisis = (() => {
                         <thead>
                             <tr>
                                 <th>Lanzada</th>
+                                <th>Base</th>
                                 <th>Posición</th>
                                 <th>Misiones</th>
                                 <th>Partidas</th>
@@ -115,7 +116,7 @@ const ModuloAnalisis = (() => {
 
         const tbody = document.querySelector("#tbl-lanzadas tbody");
         if (filas.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="9" class="text-dim text-c">
+            tbody.innerHTML = `<tr><td colspan="10" class="text-dim text-c">
                 No hay lanzadas configuradas. Créalas en la pestaña
                 <a href="#lanzadas">Lanzadas</a>.
             </td></tr>`;
@@ -123,6 +124,9 @@ const ModuloAnalisis = (() => {
         }
 
         tbody.innerHTML = filas.map((f) => {
+            const baseChip = f.base
+                ? `<span class="chip chip--${f.base} chip--xs">${f.base === "azul" ? "Azul" : "Roja"}</span>`
+                : `<span class="text-dim small">—</span>`;
             const posTxt = f.orientacion
                 ? `${escapeHtml(f.orientacion)} · #${f.numero_posicion ?? "-"} ·
                    ${f.direccion === "izq_der" ? "izq→der" : "der→izq"}`
@@ -136,6 +140,7 @@ const ModuloAnalisis = (() => {
                                        : "badge--bueno";
             return `<tr>
                 <td><strong>${escapeHtml(f.nombre)}</strong></td>
+                <td>${baseChip}</td>
                 <td class="small">${posTxt}</td>
                 <td>${misionesList}</td>
                 <td>${f.partidas_registradas || 0}</td>

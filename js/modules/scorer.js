@@ -402,6 +402,10 @@ const ModuloScorer = (() => {
                   `</div>` : ""}
             ${lanzada
                 ? `<div class="mision-posicion">🚀 ${escapeHtml(lanzada.nombre)}${
+                    lanzada.base
+                        ? ` · ${lanzada.base === "azul" ? "🟦 Azul" : "🟥 Roja"}`
+                        : ""
+                  }${
                     lanzada.orientacion
                         ? ` · ${escapeHtml(lanzada.orientacion)} · #${lanzada.numero_posicion ?? "-"} · ${
                             lanzada.direccion === "izq_der" ? "izq→der" : "der→izq"}`
