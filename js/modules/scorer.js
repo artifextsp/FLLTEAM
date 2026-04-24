@@ -108,6 +108,7 @@ const ModuloScorer = (() => {
                             <button class="btn btn--warning"        id="btn-finalizar" disabled>■ Finalizar</button>
                             <button class="btn btn--primary btn--big" id="btn-registrar" hidden>💾 Registrar</button>
                             <button class="btn btn--ghost"          id="btn-repetir">↻ Repetir</button>
+                            <button class="btn btn--ghost"          id="btn-limpiar" title="Limpia los controles de todas las misiones (mantiene jugadores en las bases)">🧹 Limpiar controles</button>
                             <button class="btn btn--danger"         id="btn-descartar">✕ Descartar</button>
                         </div>
                     </div>
@@ -158,6 +159,7 @@ const ModuloScorer = (() => {
         cont.querySelector("#btn-finalizar").addEventListener("click", () => finalizarPartida(false));
         cont.querySelector("#btn-registrar").addEventListener("click", registrarPartida);
         cont.querySelector("#btn-repetir").addEventListener("click", repetirPartida);
+        cont.querySelector("#btn-limpiar").addEventListener("click", limpiarControlesMisiones);
         cont.querySelector("#btn-descartar").addEventListener("click", descartarPartida);
 
         cont.querySelector("#in-cuadrilla").addEventListener("input", (e) => {
@@ -717,19 +719,73 @@ const ModuloScorer = (() => {
         const textoOriginal = btn.textContent;
         btn.textContent = "Guardando…";
         try {
+            const pts = puntajeTotal();
             await guardarPartida("finalizada");
             state.partidaRegistrada = true;
-            toast(`Partida registrada (${puntajeTotal()} pts)`, "success");
-            document.getElementById("crono-estado").textContent = "PARTIDA REGISTRADA";
-            btn.textContent = "✓ Registrada";
-            // Tras registrar, habilitar inicio de una nueva partida.
-            document.getElementById("btn-iniciar").disabled = false;
+            toast(`Partida registrada (${pts} pts). Controles limpiados para la siguiente lanzada.`, "success");
+            prepararNuevaPartidaTrasRegistro();
         } catch (err) {
             console.error(err);
             toast(err.message || "No se pudo registrar la partida", "error");
             btn.disabled = false;
             btn.textContent = textoOriginal;
         }
+    }
+
+    /**
+     * Resetea el puntaje de todas las misiones pero NO toca las bases ni
+     * los nombres de cuadrilla/duplas. Si hay una partida en curso pide
+     * confirmación para evitar perder datos por accidente.
+     */
+    async function limpiarControlesMisiones({ silent = false } = {}) {
+        if (!state) return;
+        if (!silent && state.partidaEnCurso) {
+            const ok = await confirmar(
+                "¿Limpiar todos los controles de la partida EN CURSO?");
+            if (!ok) return;
+        }
+        if (!silent && state.partidaFinalizada && !state.partidaRegistrada) {
+            const ok = await confirmar(
+                "Hay una partida finalizada sin registrar. ¿Limpiar sus controles?");
+            if (!ok) return;
+        }
+        state.misiones.forEach((m) => {
+            state.progresoMisiones[m.id] = nuevoEstadoMision();
+        });
+        renderMisiones();
+        if (!silent) toast("Controles limpiados", "info");
+    }
+
+    /**
+     * Tras registrar con éxito: prepara una nueva partida manteniendo
+     * jugadores en las bases y nombres de cuadrilla/duplas, pero
+     * limpiando controles y cronómetro.
+     */
+    function prepararNuevaPartidaTrasRegistro() {
+        detenerTimer();
+        state.partidaEnCurso    = false;
+        state.partidaIniciada   = false;
+        state.partidaFinalizada = false;
+        state.partidaRegistrada = false;
+        state.restante          = state.duracion;
+        state.misiones.forEach((m) => {
+            state.progresoMisiones[m.id] = nuevoEstadoMision();
+        });
+
+        const btnRegistrar = document.getElementById("btn-registrar");
+        if (btnRegistrar) {
+            btnRegistrar.hidden   = true;
+            btnRegistrar.disabled = false;
+            btnRegistrar.textContent = "💾 Registrar";
+        }
+        const btnIni = document.getElementById("btn-iniciar");
+        const btnFin = document.getElementById("btn-finalizar");
+        if (btnIni) btnIni.disabled = false;
+        if (btnFin) btnFin.disabled = true;
+        const est = document.getElementById("crono-estado");
+        if (est) est.textContent = "Partida detenida — lista para nueva lanzada";
+        renderMisiones();
+        actualizarCronometro();
     }
 
     async function repetirPartida() {
