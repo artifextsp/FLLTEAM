@@ -41,7 +41,9 @@
 /* ---------------- MAIN ---------------- */
 .app-main {
     padding: 1rem;
-    overflow-x: hidden;
+    /* `clip` corta el overflow horizontal sin crear contexto de scroll
+       — así no rompe `position: sticky` en descendientes. */
+    overflow-x: clip;
 }
 
 /* ---------------- NAVEGACIÓN INFERIOR (móvil) ---------------- */

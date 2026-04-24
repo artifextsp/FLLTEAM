@@ -5,7 +5,7 @@
 
 .lanzadas-layout {
     display: grid;
-    grid-template-columns: 280px 1fr;
+    grid-template-columns: 320px 1fr;
     gap: 1rem;
     align-items: start;
 }
@@ -17,18 +17,37 @@
 /* --- panel de misiones sin asignar -------------------------------- */
 .lanzadas-disponibles {
     position: sticky;
-    top: 72px;
-    max-height: calc(100vh - 120px);
+    /* el header mide ~56-72 px según breakpoint; reservamos un poco más */
+    top: 76px;
+    /* Altura acotada al viewport para poder scrollear dentro del panel
+       sin perder las lanzadas de la derecha. */
+    max-height: calc(100vh - 96px);
     overflow-y: auto;
     padding: 0.9rem;
+    /* evita que el contenido flotante tape elementos al hacer drag */
+    z-index: 5;
 }
 .lanzadas-disponibles h3 {
     margin: 0 0 0.6rem 0;
     font-size: 1rem;
+    position: sticky;
+    top: 0;
+    background: var(--c-bg-2);
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--c-bg-3);
+    z-index: 1;
 }
 .lanzadas-disponibles.drop-over {
     outline: 2px dashed var(--c-warning);
     outline-offset: -4px;
+}
+
+/* Contador "3 disponibles" al lado del título */
+.disp-contador {
+    float: right;
+    font-size: 0.75rem;
+    color: var(--c-text-dim);
+    font-weight: 500;
 }
 
 .mision-palette {
@@ -37,6 +56,16 @@
     display: flex;
     flex-direction: column;
     gap: 0.4rem;
+}
+
+/* En móvil/tablet donde el panel queda en 1 columna, no tiene sentido
+   que sea sticky porque confunde — lo dejamos como bloque normal. */
+@media (max-width: 900px) {
+    .lanzadas-disponibles {
+        position: static;
+        max-height: 260px;
+    }
+    .lanzadas-disponibles h3 { position: static; }
 }
 
 /* --- listado derecho de lanzadas ---------------------------------- */
@@ -109,8 +138,9 @@
     border-radius: var(--radius);
     cursor: grab;
     user-select: none;
-    font-size: 0.92rem;
+    font-size: 0.88rem;
     touch-action: none;
+    line-height: 1.25;
 }
 
 .mision-chip:hover { border-color: var(--c-primary); }
@@ -118,21 +148,25 @@
 
 .mision-chip .codigo {
     font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--c-primary);
     background: rgba(59, 130, 246, 0.08);
     border-radius: 4px;
-    padding: 1px 5px;
+    padding: 2px 5px;
+    align-self: start;
 }
+/* Nombre completo: permitimos wrap para que el coach nunca
+   dude qué misión está arrastrando. */
 .mision-chip .nombre {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
+    word-break: break-word;
+    hyphens: auto;
 }
 .mision-chip .puntos {
-    font-size: 0.8rem;
+    font-size: 0.78rem;
     color: var(--c-text-dim);
     white-space: nowrap;
+    align-self: start;
 }
 .mision-chip .chip-x {
     background: transparent;
@@ -152,6 +186,49 @@
     box-shadow: var(--shadow);
     opacity: 0.95;
 }
+
+/* Picker de misiones dentro del modal "+ Agregar" */
+.picker-misiones {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    max-height: 55vh;
+    overflow-y: auto;
+}
+.picker-misiones li label {
+    display: grid;
+    grid-template-columns: auto auto 1fr auto;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.45rem 0.6rem;
+    background: var(--c-bg);
+    border: 1px solid var(--c-bg-3);
+    border-radius: var(--radius);
+    cursor: pointer;
+    font-size: 0.9rem;
+    line-height: 1.25;
+}
+.picker-misiones li label:has(input:checked) {
+    background: rgba(59, 130, 246, 0.14);
+    border-color: var(--c-primary);
+}
+.picker-misiones input[type="checkbox"] {
+    width: 20px; height: 20px;
+    accent-color: var(--c-primary);
+}
+.picker-misiones .codigo {
+    font-family: ui-monospace, monospace;
+    font-size: 0.78rem;
+    color: var(--c-primary);
+    background: rgba(59, 130, 246, 0.08);
+    border-radius: 4px;
+    padding: 2px 5px;
+}
+.picker-misiones .nombre { word-break: break-word; }
+.picker-misiones .puntos { font-size: 0.78rem; white-space: nowrap; }
 
 /* Grid auxiliar 3 columnas para formularios */
 .grid-3 {

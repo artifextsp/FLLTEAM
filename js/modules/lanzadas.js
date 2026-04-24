@@ -41,7 +41,10 @@ const ModuloLanzadas = (() => {
             </p>
             <div class="lanzadas-layout">
                 <aside class="lanzadas-disponibles card" id="panel-disponibles">
-                    <h3>🧩 Misiones disponibles</h3>
+                    <h3>
+                        🧩 Misiones disponibles
+                        <span class="disp-contador" id="disp-contador"></span>
+                    </h3>
                     <ul class="mision-palette" id="lista-disponibles"></ul>
                 </aside>
                 <section class="lanzadas-lista" id="panel-lanzadas"></section>
@@ -75,11 +78,16 @@ const ModuloLanzadas = (() => {
     // --------------------------------------------------------------
     function pintarDisponibles() {
         const ul = document.getElementById("lista-disponibles");
+        const contador = document.getElementById("disp-contador");
         const asignadas = new Set();
         state.lanzadas.forEach((l) =>
             l.misiones.forEach((mm) => asignadas.add(mm.mision_id))
         );
         const libres = state.misiones.filter((m) => !asignadas.has(m.id));
+
+        if (contador) {
+            contador.textContent = `${libres.length} / ${state.misiones.length}`;
+        }
 
         if (libres.length === 0) {
             ul.innerHTML = `<li class="text-dim small">
@@ -140,6 +148,9 @@ const ModuloLanzadas = (() => {
                 </div>
                 <div class="lanzada-meta">
                     <span class="chip">Hasta ${maxPotencial} pt</span>
+                    <button class="btn btn--ghost btn--sm" data-accion="agregar" title="Agregar misiones sin arrastrar">
+                        + Agregar
+                    </button>
                     <button class="btn btn--ghost btn--icon" data-accion="editar" title="Editar">✎</button>
                     <button class="btn btn--ghost btn--icon" data-accion="eliminar" title="Eliminar">🗑</button>
                 </div>
@@ -162,8 +173,65 @@ const ModuloLanzadas = (() => {
 
         card.querySelector('[data-accion="editar"]').addEventListener("click", () => editarLanzada(l));
         card.querySelector('[data-accion="eliminar"]').addEventListener("click", () => eliminarLanzada(l));
+        card.querySelector('[data-accion="agregar"]').addEventListener("click", () => agregarMisionesPrompt(l));
 
         return card;
+    }
+
+    /**
+     * Alternativa al drag & drop: modal con checkboxes para agregar varias
+     * misiones disponibles a una lanzada en un solo paso. Muy útil cuando el
+     * panel izquierdo ya no está a la vista por el scroll.
+     */
+    async function agregarMisionesPrompt(l) {
+        const asignadas = new Set();
+        state.lanzadas.forEach((x) =>
+            x.misiones.forEach((mm) => asignadas.add(mm.mision_id))
+        );
+        const libres = state.misiones.filter((m) => !asignadas.has(m.id));
+
+        if (libres.length === 0) {
+            toast("No hay misiones disponibles — todas están asignadas", "info");
+            return;
+        }
+
+        const html = `
+            <p class="text-dim small" style="margin-top:0;">
+                Marca las misiones que forman parte de
+                <strong>${escapeHtml(l.nombre)}</strong>.
+            </p>
+            <ul class="picker-misiones">
+                ${libres.map((m) => `
+                    <li>
+                        <label>
+                            <input type="checkbox" value="${m.id}" />
+                            <span class="codigo">${escapeHtml(m.codigo)}</span>
+                            <span class="nombre">${escapeHtml(m.nombre_es)}</span>
+                            <span class="puntos text-dim">${maxMision(m)} pt</span>
+                        </label>
+                    </li>`).join("")}
+            </ul>`;
+
+        await abrirModal(`Agregar misiones · ${l.nombre}`, html, {
+            okTexto: "Agregar",
+            onSubmit: async (body) => {
+                const ids = [...body.querySelectorAll('input[type="checkbox"]:checked')]
+                    .map((c) => c.value);
+                if (ids.length === 0) {
+                    toast("Selecciona al menos una misión", "info");
+                    return false;
+                }
+                for (const misionId of ids) {
+                    await ApiLanzadas.asignarMision({
+                        lanzada_id: l.id,
+                        mision_id: misionId,
+                        equipo_id: state.equipoId,
+                    });
+                }
+                toast(`${ids.length} misión(es) añadida(s) a ${l.nombre}`, "success");
+                await cargar();
+            },
+        });
     }
 
     /** Chip arrastrable de misión. */
