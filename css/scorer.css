@@ -243,55 +243,146 @@
 .mision-head .puntos {
     font-weight: 700;
     color: var(--c-primary);
+    text-align: right;
+    font-size: 0.85rem;
+    line-height: 1.2;
 }
+.mision-head .puntos .pct {
+    display: block;
+    font-size: 0.72rem;
+    color: var(--c-text-dim);
+    font-weight: 600;
+}
+
+.mision-tarjeta.completada .mision-head .puntos .pct { color: var(--c-success); }
+.mision-tarjeta.fallada    .mision-head .puntos .pct { color: var(--c-danger); }
+
+/* ---------- Barra de progreso ---------- */
+.mision-progress {
+    height: 6px;
+    background: var(--c-bg-3);
+    border-radius: 999px;
+    overflow: hidden;
+}
+.mision-progress__bar {
+    height: 100%;
+    width: 0;
+    background: var(--c-primary);
+    transition: width 0.15s ease, background 0.15s ease;
+}
+.mision-tarjeta.completada .mision-progress__bar { background: var(--c-success); }
+.mision-tarjeta.fallada    .mision-progress__bar { background: var(--c-danger);  width: 100% !important; opacity: 0.35; }
+
+.mision-tarjeta.parcial {
+    border-color: var(--c-primary);
+}
+
+/* ---------- Controles tipados ---------- */
+.mision-controles {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+}
+
+.ctrl {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    background: var(--c-bg-1);
+    border: 1px solid var(--c-bg-3);
+    border-radius: var(--radius);
+    padding: 0.45rem 0.55rem;
+}
+
+.ctrl-nombre {
+    font-size: 0.85rem;
+    display: flex;
+    justify-content: space-between;
+    gap: 0.5rem;
+    align-items: baseline;
+}
+.ctrl-nombre .small { font-weight: 500; }
+
+.ctrl--si-no .ctrl-toggle {
+    display: flex;
+    align-items: center;
+    gap: 0.55rem;
+    cursor: pointer;
+    user-select: none;
+}
+.ctrl--si-no input[type="checkbox"] {
+    width: 22px;
+    height: 22px;
+    accent-color: var(--c-primary);
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.ctrl--si-no:has(input:checked) {
+    background: rgba(99, 102, 241, 0.12);
+    border-color: var(--c-primary);
+}
+
+.ctrl-contador {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    justify-content: center;
+}
+.ctrl-contador .btn.btn--icon {
+    width: 36px;
+    height: 36px;
+    min-height: 36px;
+    font-size: 1.15rem;
+    padding: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid var(--c-bg-3);
+}
+.ctrl-valor {
+    font-size: 1.1rem;
+    font-weight: 700;
+    min-width: 22px;
+    text-align: center;
+    color: var(--c-primary);
+}
+
+.ctrl-opciones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.3rem;
+}
+.pill {
+    border: 2px solid var(--c-bg-3);
+    background: transparent;
+    color: var(--c-text);
+    padding: 0.25rem 0.55rem;
+    border-radius: 999px;
+    font-size: 0.8rem;
+    cursor: pointer;
+    user-select: none;
+    display: inline-flex;
+    flex-direction: column;
+    align-items: center;
+    line-height: 1.1;
+    min-height: 36px;
+    justify-content: center;
+}
+.pill .small { font-size: 0.68rem; }
+.pill.activo {
+    background: var(--c-primary);
+    border-color: var(--c-primary);
+    color: #fff;
+}
+.pill.activo .small { color: rgba(255,255,255,0.85); }
 
 .mision-actions {
     display: flex;
     gap: 0.3rem;
     flex-wrap: wrap;
+    justify-content: flex-end;
 }
-
-.toggle-btn {
-    flex: 1;
-    min-height: 44px;
-    border: 2px solid var(--c-bg-3);
-    background: transparent;
-    color: var(--c-text);
-    border-radius: var(--radius);
-    font-weight: 600;
-    cursor: pointer;
-    font-size: 0.9rem;
-    transition: all 0.1s ease;
-}
-.toggle-btn.activo--completada {
-    background: var(--c-success); border-color: var(--c-success); color: #fff;
-}
-.toggle-btn.activo--fallada {
-    background: var(--c-danger); border-color: var(--c-danger); color: #fff;
-}
-
-.bonus-list {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.3rem;
-}
-
-.bonus-chip {
-    border: 2px solid var(--c-bg-3);
-    background: transparent;
-    color: var(--c-text);
-    padding: 0.3rem 0.6rem;
-    border-radius: 999px;
-    font-size: 0.78rem;
-    cursor: pointer;
-    user-select: none;
-    min-height: 32px;
-}
-.bonus-chip.activo {
-    background: var(--c-primary);
-    border-color: var(--c-primary);
-    color: #fff;
-}
+.mision-actions .btn { flex: 0 0 auto; }
 
 .mision-posicion {
     font-size: 0.78rem;

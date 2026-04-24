@@ -56,6 +56,29 @@
     padding: 0.4rem 0.6rem;
 }
 
+.btn--sm {
+    min-height: 32px;
+    padding: 0.25rem 0.6rem;
+    font-size: 0.8rem;
+}
+
+/* ----------------------- GRÁFICAS (Chart.js) ----------------------- */
+/* Contenedor con altura acotada: evita que la gráfica crezca
+   proporcional al ancho y domine toda la pantalla. */
+.chart-wrap {
+    position: relative;
+    width: 100%;
+    height: 220px;
+    max-height: 45vh;
+}
+.chart-wrap canvas {
+    width: 100% !important;
+    height: 100% !important;
+}
+@media (max-width: 600px) {
+    .chart-wrap { height: 180px; }
+}
+
 /* ----------------------- FORMULARIOS ----------------------- */
 .form-field {
     display: flex;

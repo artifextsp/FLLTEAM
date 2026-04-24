@@ -67,7 +67,9 @@ const ModuloAnalisis = (() => {
                     <label for="sel-mision">Misión</label>
                     <select id="sel-mision"></select>
                 </div>
-                <canvas id="grafico-tendencia" height="120"></canvas>
+                <div class="chart-wrap">
+                    <canvas id="grafico-tendencia"></canvas>
+                </div>
             </div>
 
             <div class="card" id="card-bajas">
@@ -226,10 +228,32 @@ const ModuloAnalisis = (() => {
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
+                animation: { duration: 250 },
                 scales: {
-                    y: { min: 0, max: 100, ticks: { callback: (v) => v + "%" } },
+                    y: {
+                        min: 0, max: 100,
+                        ticks: { callback: (v) => v + "%", color: "#94a3b8", font: { size: 10 } },
+                        grid:  { color: "rgba(148,163,184,0.12)" },
+                    },
+                    x: {
+                        ticks: {
+                            color: "#94a3b8",
+                            font: { size: 10 },
+                            maxRotation: 0,
+                            autoSkip: true,
+                            maxTicksLimit: 8,
+                        },
+                        grid: { color: "rgba(148,163,184,0.08)" },
+                    },
                 },
-                plugins: { legend: { labels: { color: "#cbd5e1" } } },
+                plugins: {
+                    legend: { labels: { color: "#cbd5e1", boxWidth: 14, font: { size: 11 } } },
+                    tooltip: { displayColors: false },
+                },
+                elements: {
+                    point: { radius: 2, hoverRadius: 4 },
+                    line:  { borderWidth: 2 },
+                },
             },
         });
     }

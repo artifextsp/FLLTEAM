@@ -27,8 +27,8 @@ const ModuloMisiones = (() => {
                             <tr>
                                 <th>Cód.</th>
                                 <th>Nombre</th>
-                                <th>Base</th>
-                                <th>Bonus</th>
+                                <th>Controles (tipo · puntos)</th>
+                                <th>Máx.</th>
                                 <th>Lanzada</th>
                             </tr>
                         </thead>
@@ -75,16 +75,24 @@ const ModuloMisiones = (() => {
                 : `<span class="text-dim small">Sin asignar</span>`;
 
             const tr = document.createElement("tr");
+            const controlesHtml = (m.bonus || []).map((c) => {
+                if (c.tipo === "contador") {
+                    return `<span class="chip">🔢 ${escapeHtml(c.nombre)} · ${c.puntos}×${c.max} = ${c.puntos * c.max}pt</span>`;
+                }
+                if (c.tipo === "opciones") {
+                    const mx = (c.opciones || []).reduce((x, o) => Math.max(x, o.puntos || 0), 0);
+                    return `<span class="chip">📋 ${escapeHtml(c.nombre)} · máx ${mx}pt</span>`;
+                }
+                return `<span class="chip">✓ ${escapeHtml(c.nombre)} · +${c.puntos}pt</span>`;
+            }).join(" ");
             tr.innerHTML = `
                 <td><code>${escapeHtml(m.codigo)}</code></td>
                 <td>
                     <div><strong>${escapeHtml(m.nombre_es)}</strong></div>
                     <div class="text-dim small">${escapeHtml(m.descripcion || "")}</div>
                 </td>
-                <td>${m.puntos_base}</td>
-                <td>${(m.bonus || []).map((b) =>
-                    `<span class="chip">+${b.puntos} ${escapeHtml(b.nombre)}</span>`
-                ).join(" ")}</td>
+                <td>${controlesHtml || `<span class="text-dim small">Sin controles</span>`}</td>
+                <td><strong>${maxMision(m)} pt</strong></td>
                 <td>${posTxt}</td>`;
             tbody.appendChild(tr);
         });

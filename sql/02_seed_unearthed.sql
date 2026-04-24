@@ -1,199 +1,208 @@
 -- =====================================================================
---  Seed oficial de Misiones - Temporada UNEARTHED 2025-2026
---  Fuente: FLL_Challenge_Reglas_UNEARTHED.pdf (edición en español)
---  https://fll.robotica.com.py/archivos/Challenge/FLL_Challenge_Reglas_UNEARTHED.pdf
+--  Seed oficial de Misiones · Temporada UNEARTHED 2025-2026
+--  Fuente: FIRST Event Hub Official Scoring Calculator
+--  https://eventhub.firstinspires.org/scoresheet
+--  Corroborado con https://ostermiller.org/fll/unearthed.html
 -- ---------------------------------------------------------------------
---  Esquema de puntos:
---   - puntos_base: puntaje al marcar la misión como "Completada".
---   - bonus: arreglo de objetos {codigo,nombre,puntos} — cada chip suma
---     sus puntos cuando se activa (p.ej. items repetibles "c/u" se
---     listan como bonus independientes).
+--  Esquema de puntos (NUEVO FORMATO POR CONTROLES TIPADOS)
+--  -------------------------------------------------------
+--  Se reutiliza la columna `bonus` (jsonb) como arreglo de "controles"
+--  que el scorer renderiza directamente. Cada control puede ser:
 --
---  NOTA SOBRE CONTEO DE ITEMS "c/u":
---  Algunas misiones puntúan "X puntos cada uno" sobre varios modelos
---  (sedimentos, bloques, piezas, banderines…). El PDF no siempre indica
---  explícitamente la cantidad exacta; los conteos aquí se basan en lo
---  estándar observado en los videos/imágenes oficiales. Si tu mesa tiene
---  más o menos items, simplemente AÑADE o ELIMINA chips de bonus
---  editando la columna `bonus` en la tabla `misiones`.
+--    {"codigo":"…","tipo":"si_no",   "nombre":"…","puntos":N}
+--       → toggle. Suma N si está activo.
+--
+--    {"codigo":"…","tipo":"contador","nombre":"…","puntos":N,"max":M}
+--       → slider 0..M. Suma (valor × N).
+--
+--    {"codigo":"…","tipo":"opciones","nombre":"…",
+--        "opciones":[{"valor":0,"puntos":0,"label":"0"}, …]}
+--       → selección única. Suma los puntos de la opción marcada.
+--
+--  `puntos_base` queda en 0 para TODAS las misiones: los puntos ahora
+--  viven dentro de los controles. Esto alinea el scorer con la versión
+--  oficial y permite calcular un % de cumplimiento por misión
+--  (puntos_obtenidos / max_mision × 100).
+--
+--  Máximo teórico total: 545 puntos (sin GP — que lo asigna el árbitro).
 -- =====================================================================
 
--- Resembrar desde cero (solo UNEARTHED). Seguro porque `misiones` es
--- referenciada por `posiciones_mision` y `partidas_misiones` con
--- FK on delete restrict, pero si aún no hay partidas se limpia bien.
 delete from public.misiones where temporada = 'UNEARTHED 2025-2026';
 
 insert into public.misiones
     (codigo, nombre_es, descripcion, puntos_base, bonus, orden, temporada)
 values
--- -------------------- M00 -------------------------------------------
-('M00', 'Inspección de Equipamiento',
- 'Todo el equipamiento cabe en una sola área de lanzamiento y por debajo del límite de 305 mm de altura.',
- 20,
- '[]'::jsonb,
- 0, 'UNEARTHED 2025-2026'),
 
--- -------------------- M01 -------------------------------------------
-('M01', 'Cepillado de superficie',
- 'Retirar los sedimentos tocando el tapete. El cepillo de arqueología no toca el sitio de excavación al final.',
+-- ---------- EI · Inspección de Equipamiento · máx 20 -----------------
+('EI', 'Inspección de Equipamiento',
+ 'El robot y todo el equipamiento caben completamente en un área de lanzamiento y por debajo del límite de altura.',
  0,
  '[
-   {"codigo":"s1","nombre":"Sedimento 1 retirado","puntos":10},
-   {"codigo":"s2","nombre":"Sedimento 2 retirado","puntos":10},
-   {"codigo":"s3","nombre":"Sedimento 3 retirado","puntos":10},
-   {"codigo":"cep","nombre":"Cepillo no toca el sitio","puntos":10}
+   {"codigo":"fit","tipo":"si_no","nombre":"Cabe en el área y bajo el límite","puntos":20}
+ ]'::jsonb,
+ 0, 'UNEARTHED 2025-2026'),
+
+-- ---------- M01 · Surface Brushing · máx 30 --------------------------
+('M01', 'Cepillado de superficie',
+ 'Retirar los depósitos de sedimento tocando el tapete. El cepillo no toca el sitio al final.',
+ 0,
+ '[
+   {"codigo":"soil","tipo":"contador","nombre":"Sedimentos completamente retirados","puntos":10,"max":2},
+   {"codigo":"brush","tipo":"si_no","nombre":"Cepillo no toca el sitio","puntos":10}
  ]'::jsonb,
  1, 'UNEARTHED 2025-2026'),
 
--- -------------------- M02 -------------------------------------------
-('M02', 'Revelación de mapa',
- 'Las secciones de la capa superficial del suelo se han retirado completamente (10 c/u).',
+-- ---------- M02 · Map Reveal · máx 30 --------------------------------
+('M02', 'Revelación del mapa',
+ 'Secciones de capa superficial completamente retiradas.',
  0,
  '[
-   {"codigo":"sec1","nombre":"Sección 1 retirada","puntos":10},
-   {"codigo":"sec2","nombre":"Sección 2 retirada","puntos":10},
-   {"codigo":"sec3","nombre":"Sección 3 retirada","puntos":10}
+   {"codigo":"topsoil","tipo":"contador","nombre":"Secciones de tierra retiradas","puntos":10,"max":3}
  ]'::jsonb,
  2, 'UNEARTHED 2025-2026'),
 
--- -------------------- M03 -------------------------------------------
-('M03', 'Recuperación cuidadosa',
- 'Extraer el artefacto valioso de la mina garantizando la estabilidad del sitio.',
- 30,
+-- ---------- M03 · Mineshaft Explorer · máx 40 ------------------------
+('M03', 'Explorador del tiro de mina',
+ 'Tu carro de mina queda en el campo del oponente; bonus si el carro oponente queda en tu campo.',
+ 0,
  '[
-   {"codigo":"sop","nombre":"Las dos estructuras de soporte de pie","puntos":10}
+   {"codigo":"mine","tipo":"si_no","nombre":"Tu carro en el campo oponente","puntos":30},
+   {"codigo":"opp","tipo":"si_no","nombre":"Bonus: carro oponente en tu campo","puntos":10}
  ]'::jsonb,
  3, 'UNEARTHED 2025-2026'),
 
--- -------------------- M04 -------------------------------------------
-('M04', 'Exploración de minas',
- 'El carro de mina del equipo pasa completamente al terreno del oponente.',
- 30,
+-- ---------- M04 · Careful Recovery · máx 40 --------------------------
+('M04', 'Recuperación cuidadosa',
+ 'El artefacto valioso no toca la mina y ambos soportes quedan de pie.',
+ 0,
  '[
-   {"codigo":"b1","nombre":"Bono: carro oponente en tu terreno","puntos":10}
+   {"codigo":"art","tipo":"si_no","nombre":"Artefacto valioso no toca la mina","puntos":30},
+   {"codigo":"sup","tipo":"si_no","nombre":"Ambos soportes de pie","puntos":10}
  ]'::jsonb,
  4, 'UNEARTHED 2025-2026'),
 
--- -------------------- M05 -------------------------------------------
+-- ---------- M05 · Who Lived Here? · máx 30 ---------------------------
 ('M05', '¿Quiénes vivieron aquí?',
- 'Reconstruir la estructura: el suelo queda completamente horizontal.',
- 30,
- '[]'::jsonb,
- 5, 'UNEARTHED 2025-2026'),
-
--- -------------------- M06 -------------------------------------------
-('M06', 'Forja',
- 'Liberar los bloques de mineral de la forja (10 c/u).',
+ 'El suelo de la estructura queda completamente vertical.',
  0,
  '[
-   {"codigo":"bl1","nombre":"Bloque 1 fuera de la forja","puntos":10},
-   {"codigo":"bl2","nombre":"Bloque 2 fuera de la forja","puntos":10},
-   {"codigo":"bl3","nombre":"Bloque 3 fuera de la forja","puntos":10}
+   {"codigo":"floor","tipo":"si_no","nombre":"Suelo completamente vertical","puntos":30}
+ ]'::jsonb,
+ 5, 'UNEARTHED 2025-2026'),
+
+-- ---------- M06 · Forge · máx 30 -------------------------------------
+('M06', 'Forja',
+ 'Bloques de mineral fuera de la forja (no tocándola).',
+ 0,
+ '[
+   {"codigo":"ore","tipo":"contador","nombre":"Bloques fuera de la forja","puntos":10,"max":3}
  ]'::jsonb,
  6, 'UNEARTHED 2025-2026'),
 
--- -------------------- M07 -------------------------------------------
+-- ---------- M07 · Heavy Lifting · máx 30 -----------------------------
 ('M07', 'Levantamiento de cargas pesadas',
  'La piedra de molino ya no toca su base.',
- 30,
- '[]'::jsonb,
- 7, 'UNEARTHED 2025-2026'),
-
--- -------------------- M08 -------------------------------------------
-('M08', 'Silo',
- 'Extraer las piezas preservadas del silo (10 c/u).',
  0,
  '[
-   {"codigo":"p1","nombre":"Pieza 1 fuera del silo","puntos":10},
-   {"codigo":"p2","nombre":"Pieza 2 fuera del silo","puntos":10},
-   {"codigo":"p3","nombre":"Pieza 3 fuera del silo","puntos":10}
+   {"codigo":"mill","tipo":"si_no","nombre":"Piedra de molino no toca su base","puntos":30}
+ ]'::jsonb,
+ 7, 'UNEARTHED 2025-2026'),
+
+-- ---------- M08 · Silo · máx 30 --------------------------------------
+('M08', 'Silo',
+ 'Piezas preservadas fuera del silo.',
+ 0,
+ '[
+   {"codigo":"pcs","tipo":"contador","nombre":"Piezas fuera del silo","puntos":10,"max":3}
  ]'::jsonb,
  8, 'UNEARTHED 2025-2026'),
 
--- -------------------- M09 -------------------------------------------
+-- ---------- M09 · What''s on Sale? · máx 30 --------------------------
 ('M09', '¿Qué hay a la venta?',
- 'Restaurar el puesto del mercado.',
- 20,
+ 'Techo del mercado completamente levantado y mercancías levantadas.',
+ 0,
  '[
-   {"codigo":"art","nombre":"Artículos del mercado completamente levantados","puntos":10}
+   {"codigo":"roof","tipo":"si_no","nombre":"Techo completamente levantado","puntos":20},
+   {"codigo":"wares","tipo":"si_no","nombre":"Mercancías levantadas","puntos":10}
  ]'::jsonb,
  9, 'UNEARTHED 2025-2026'),
 
--- -------------------- M10 -------------------------------------------
-('M10', 'Artefactos para pesca',
- 'Los artefactos se elevan por encima del cúmulo de tierra.',
- 20,
+-- ---------- M10 · Tip the Scales · máx 30 ----------------------------
+('M10', 'Inclinar la balanza',
+ 'Balanza inclinada tocando el tapete; platillo completamente removido.',
+ 0,
  '[
-   {"codigo":"b1","nombre":"Bono: banderín azul al menos parcialmente hacia abajo","puntos":10}
+   {"codigo":"scale","tipo":"si_no","nombre":"Balanza inclinada tocando el tapete","puntos":20},
+   {"codigo":"pan","tipo":"si_no","nombre":"Platillo completamente removido","puntos":10}
  ]'::jsonb,
  10, 'UNEARTHED 2025-2026'),
 
--- -------------------- M11 -------------------------------------------
-('M11', 'Inclinación de balanza',
- 'La balanza está inclinada hacia el otro lado y toca el tapete.',
- 20,
+-- ---------- M11 · Angler Artifacts · máx 30 --------------------------
+('M11', 'Artefactos del pescador',
+ 'Artefactos elevados por encima del nivel del suelo; bonus si la bandera de la grúa queda al menos parcialmente bajada.',
+ 0,
  '[
-   {"codigo":"plato","nombre":"Platillo con loop retirado completamente","puntos":10}
+   {"codigo":"raised","tipo":"si_no","nombre":"Artefactos elevados sobre el suelo","puntos":20},
+   {"codigo":"flag","tipo":"si_no","nombre":"Bonus: bandera de la grúa bajada","puntos":10}
  ]'::jsonb,
  11, 'UNEARTHED 2025-2026'),
 
--- -------------------- M12 -------------------------------------------
+-- ---------- M12 · Salvage Operation · máx 30 -------------------------
 ('M12', 'Operación de salvamento',
- 'La arena se ha removido completamente (palanca pasa la línea en el tapete).',
- 20,
+ 'Arena completamente removida y barco completamente levantado.',
+ 0,
  '[
-   {"codigo":"balsa","nombre":"Balsa levantada completamente","puntos":10}
+   {"codigo":"sand","tipo":"si_no","nombre":"Arena completamente removida","puntos":20},
+   {"codigo":"ship","tipo":"si_no","nombre":"Barco completamente levantado","puntos":10}
  ]'::jsonb,
  12, 'UNEARTHED 2025-2026'),
 
--- -------------------- M13 -------------------------------------------
-('M13', 'Reconstrucción de estatua',
- 'La estatua está completamente levantada.',
- 30,
- '[]'::jsonb,
- 13, 'UNEARTHED 2025-2026'),
-
--- -------------------- M14 -------------------------------------------
-('M14', 'Banderines de sitio',
- 'Colocar banderines para marcar los sitios (10 c/u, banderín al menos parcialmente dentro y tocando el tapete).',
+-- ---------- M13 · Statue Rebuild · máx 30 ----------------------------
+('M13', 'Reconstrucción de la estatua',
+ 'Estatua completamente levantada.',
  0,
  '[
-   {"codigo":"b1","nombre":"Banderín en sitio 1","puntos":10},
-   {"codigo":"b2","nombre":"Banderín en sitio 2","puntos":10},
-   {"codigo":"b3","nombre":"Banderín en sitio 3","puntos":10},
-   {"codigo":"b4","nombre":"Banderín en sitio 4","puntos":10},
-   {"codigo":"b5","nombre":"Banderín en sitio 5","puntos":10},
-   {"codigo":"b6","nombre":"Banderín en sitio 6","puntos":10}
+   {"codigo":"st","tipo":"si_no","nombre":"Estatua completamente levantada","puntos":30}
+ ]'::jsonb,
+ 13, 'UNEARTHED 2025-2026'),
+
+-- ---------- M14 · Forum · máx 35 -------------------------------------
+('M14', 'Foro',
+ 'Artefactos tocando el tapete y al menos parcialmente dentro del foro (5 c/u: Cepillo, Tierra, Artefacto Valioso, Carro oponente, Mineral con fósil, Piedra de molino, Platillo).',
+ 0,
+ '[
+   {"codigo":"forum","tipo":"contador","nombre":"Artefactos en el foro","puntos":5,"max":7}
  ]'::jsonb,
  14, 'UNEARTHED 2025-2026'),
 
--- -------------------- M15 -------------------------------------------
-('M15', 'Foro',
- 'Artefactos al menos parcialmente en el foro y tocando el tapete (5 c/u por cada tipo de artefacto entregado).',
+-- ---------- M15 · Site Marking · máx 30 ------------------------------
+('M15', 'Marcado de sitios',
+ 'Sitios con bandera al menos parcialmente dentro y tocando el tapete.',
  0,
  '[
-   {"codigo":"cep","nombre":"Cepillo en el foro","puntos":5},
-   {"codigo":"cap","nombre":"Capa superficial de suelo en el foro","puntos":5},
-   {"codigo":"val","nombre":"Artefacto valioso en el foro","puntos":5},
-   {"codigo":"car","nombre":"Carro de mina del equipo oponente en el foro","puntos":5},
-   {"codigo":"min","nombre":"Mineral con artefacto fosilizado en el foro","puntos":5},
-   {"codigo":"mol","nombre":"Piedra de molino en el foro","puntos":5},
-   {"codigo":"pla","nombre":"Platillo de balanza en el foro","puntos":5}
+   {"codigo":"sites","tipo":"contador","nombre":"Sitios marcados con bandera","puntos":10,"max":3}
  ]'::jsonb,
  15, 'UNEARTHED 2025-2026'),
 
--- -------------------- M16 - Fichas de precisión ---------------------
--- Especial: se registra al final de la partida la cantidad restante
--- de fichas (de 1 a 6). Elige UN solo bonus.
-('M16', 'Fichas de precisión',
- 'Fichas restantes al final de la partida (seleccionar UNA opción según la cantidad que quede).',
+-- ---------- PT · Precision Tokens · máx 50 ---------------------------
+('PT', 'Fichas de precisión',
+ 'Cantidad de fichas de precisión que quedan al final de la partida (seleccionar cuántas).',
  0,
  '[
-   {"codigo":"f6","nombre":"6 fichas restantes","puntos":50},
-   {"codigo":"f5","nombre":"5 fichas restantes","puntos":50},
-   {"codigo":"f4","nombre":"4 fichas restantes","puntos":35},
-   {"codigo":"f3","nombre":"3 fichas restantes","puntos":25},
-   {"codigo":"f2","nombre":"2 fichas restantes","puntos":15},
-   {"codigo":"f1","nombre":"1 ficha restante","puntos":10}
+   {"codigo":"pt","tipo":"opciones","nombre":"Fichas restantes",
+    "opciones":[
+       {"valor":0,"puntos":0,"label":"0"},
+       {"valor":1,"puntos":10,"label":"1"},
+       {"valor":2,"puntos":15,"label":"2"},
+       {"valor":3,"puntos":25,"label":"3"},
+       {"valor":4,"puntos":35,"label":"4"},
+       {"valor":5,"puntos":50,"label":"5"},
+       {"valor":6,"puntos":50,"label":"6"}
+    ]}
  ]'::jsonb,
  16, 'UNEARTHED 2025-2026');
+
+-- Máximo teórico:
+--   EI 20 + M01 30 + M02 30 + M03 40 + M04 40 + M05 30 + M06 30 +
+--   M07 30 + M08 30 + M09 30 + M10 30 + M11 30 + M12 30 + M13 30 +
+--   M14 35 + M15 30 + PT 50 = 545

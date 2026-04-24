@@ -1,21 +1,12 @@
 // =====================================================================
-//  Módulo SCORER - Pantalla principal de lanzamiento (prioridad #1)
+//  Módulo SCORER — Pantalla principal de lanzamiento (prioridad #1)
 //  ---------------------------------------------------------------
-//  Funcionalidades:
-//   - Cronómetro descendente 2:30 dominante y centrado.
-//   - Drag & drop (mouse + touch) de jugadores a Base Azul / Roja.
-//   - Toggles por misión (completada / fallada) + bonus por misión.
-//     Los bonus pueden activarse independientemente para soportar
-//     misiones "c/u" (puntos_base=0 + varios chips de bonus).
-//   - Cuadrilla y duplas opcionales (con nombre libre).
-//   - Botones: Iniciar, Finalizar, Repetir, Descartar.
-//   - AL FINALIZAR: la partida NO se guarda automáticamente; se muestra
-//     un botón "Registrar" que el coach debe presionar para enviar la
-//     partida a la base de datos. Entre finalizar y registrar el coach
-//     puede ajustar misiones/bonus.
-//   - Guarda partida completa al registrar (cabecera + jugadores + misiones)
-//     repartiendo el puntaje total equitativamente entre los 4 jugadores
-//     (2 por base); tambien se registra el puntaje total con base.
+//  Puntuación oficial UNEARTHED 2025-26 — máximo teórico 545 puntos.
+//  Cada misión se puntúa con "controles tipados" (si_no / contador /
+//  opciones). El puntaje se obtiene sumando únicamente los controles
+//  activos; el % de cumplimiento es puntos_obtenidos / max_mision × 100.
+//  Se conservan los estados derivados Completada (100 %) y Fallada
+//  (toggle manual → puntaje = 0).
 // =====================================================================
 
 const ModuloScorer = (() => {
@@ -76,7 +67,7 @@ const ModuloScorer = (() => {
             duplaRojaNombre: "",
         };
         misiones.forEach((m) => {
-            state.progresoMisiones[m.id] = { estado: null, bonus: new Set() };
+            state.progresoMisiones[m.id] = nuevoEstadoMision();
         });
 
         cont.innerHTML = plantilla();
@@ -371,35 +362,42 @@ const ModuloScorer = (() => {
         actualizarScoreTotal();
     }
 
+    /** Estado inicial de una misión: sin fallar y sin controles activos. */
+    function nuevoEstadoMision() {
+        return { fallada: false, valores: {} };
+    }
+
     function crearTarjetaMision(m) {
         const prog    = state.progresoMisiones[m.id];
         const lanzada = state.lanzadaPorMision[m.id];
+        const mx      = maxMision(m);
 
         const el = document.createElement("div");
         el.className = "mision-tarjeta";
         el.dataset.misionId = m.id;
 
-        const maxMision = (m.puntos_base || 0) +
-            (Array.isArray(m.bonus) ? m.bonus.reduce((s, b) => s + (b.puntos || 0), 0) : 0);
-
         el.innerHTML = `
             <div class="mision-head">
                 <span class="codigo">${escapeHtml(m.codigo)}</span>
                 <span class="titulo">${escapeHtml(m.nombre_es)}</span>
-                <span class="puntos" title="Puntaje máximo posible">hasta ${maxMision} pt</span>
+                <span class="puntos">
+                    <strong data-score>0</strong> / ${mx} pt
+                    <span class="pct" data-pct>0%</span>
+                </span>
             </div>
             ${m.descripcion ? `<div class="text-dim small">${escapeHtml(m.descripcion)}</div>` : ""}
-            <div class="mision-actions">
-                <button class="toggle-btn" data-accion="ok">✓ Completada</button>
-                <button class="toggle-btn" data-accion="fail">✗ Fallada</button>
+            <div class="mision-progress">
+                <div class="mision-progress__bar" data-bar></div>
             </div>
-            ${Array.isArray(m.bonus) && m.bonus.length
-                ? `<div class="bonus-list">` +
-                  m.bonus.map((b) =>
-                      `<button class="bonus-chip" data-bonus="${escapeHtml(b.codigo)}">
-                         +${b.puntos} ${escapeHtml(b.nombre)}
-                       </button>`).join("") +
-                  `</div>` : ""}
+            <div class="mision-controles">${renderControles(m, prog)}</div>
+            <div class="mision-actions">
+                <button class="btn btn--ghost btn--sm" data-accion="reset" title="Limpiar todos los controles">
+                    ↺ Limpiar
+                </button>
+                <button class="btn btn--danger btn--sm" data-accion="fail">
+                    ✗ Marcar como fallada
+                </button>
+            </div>
             ${lanzada
                 ? `<div class="mision-posicion">🚀 ${escapeHtml(lanzada.nombre)}${
                     lanzada.base
@@ -419,60 +417,186 @@ const ModuloScorer = (() => {
             }
         `;
 
-        // Estado visual inicial
-        aplicarEstadoMision(el, m, prog);
-
-        el.querySelectorAll(".toggle-btn").forEach((b) => {
-            b.addEventListener("click", () => {
-                if (!puedeEditarMisiones()) {
-                    toast("Inicia la partida para marcar misiones", "info");
-                    return;
-                }
-                const accion = b.dataset.accion; // 'ok' | 'fail'
-                const nuevo  = prog.estado === accion ? null : accion;
-                prog.estado = nuevo;
-                // Al marcar "fallada" se descartan los bonus; al completar o
-                // limpiar, los bonus se mantienen para permitir ajustes.
-                if (nuevo === "fail") prog.bonus.clear();
-                aplicarEstadoMision(el, m, prog);
-                actualizarScoreTotal();
-            });
-        });
-
-        // Los bonus son independientes del estado "completada" para
-        // soportar misiones tipo "c/u" (puntos_base=0). Solo se bloquean
-        // si la misión fue marcada explícitamente como fallada.
-        el.querySelectorAll(".bonus-chip").forEach((c) => {
-            c.addEventListener("click", () => {
-                if (!puedeEditarMisiones()) {
-                    toast("Inicia la partida para marcar bonus", "info");
-                    return;
-                }
-                if (prog.estado === "fail") {
-                    toast("La misión está marcada como fallada — desmárcala para sumar bonus", "info");
-                    return;
-                }
-                const cod = c.dataset.bonus;
-                prog.bonus.has(cod) ? prog.bonus.delete(cod) : prog.bonus.add(cod);
-                c.classList.toggle("activo", prog.bonus.has(cod));
-                actualizarScoreTotal();
-            });
-        });
-
+        conectarEventosControles(el, m);
+        aplicarEstadoMision(el, m);
         return el;
     }
 
-    function aplicarEstadoMision(el, m, prog) {
-        el.classList.remove("completada", "fallada");
-        if (prog.estado === "ok")   el.classList.add("completada");
-        if (prog.estado === "fail") el.classList.add("fallada");
-        el.querySelectorAll(".toggle-btn").forEach((b) => {
-            b.classList.remove("activo--completada", "activo--fallada");
-            if (prog.estado === "ok"   && b.dataset.accion === "ok")   b.classList.add("activo--completada");
-            if (prog.estado === "fail" && b.dataset.accion === "fail") b.classList.add("activo--fallada");
+    /** Renderiza los controles tipados de una misión. */
+    function renderControles(m, prog) {
+        const controles = Array.isArray(m.bonus) ? m.bonus : [];
+        if (controles.length === 0) {
+            return `<p class="text-dim small">Sin controles configurados.</p>`;
+        }
+        return controles.map((c) => renderControl(c, prog)).join("");
+    }
+
+    function renderControl(c, prog) {
+        const v = prog.valores[c.codigo];
+        if (c.tipo === "contador") {
+            const actual = Math.max(0, Math.min(c.max || 0, Number(v) || 0));
+            return `
+                <div class="ctrl ctrl--contador" data-codigo="${escapeHtml(c.codigo)}" data-tipo="contador" data-max="${c.max}">
+                    <div class="ctrl-nombre">
+                        ${escapeHtml(c.nombre)}
+                        <span class="text-dim small">${c.puntos} pt c/u · máx ${c.max}</span>
+                    </div>
+                    <div class="ctrl-contador">
+                        <button type="button" class="btn btn--ghost btn--icon" data-accion="menos">−</button>
+                        <span class="ctrl-valor" data-valor>${actual}</span>
+                        <span class="text-dim">/ ${c.max}</span>
+                        <button type="button" class="btn btn--ghost btn--icon" data-accion="mas">+</button>
+                    </div>
+                </div>`;
+        }
+        if (c.tipo === "opciones") {
+            const opciones = Array.isArray(c.opciones) ? c.opciones : [];
+            return `
+                <div class="ctrl ctrl--opciones" data-codigo="${escapeHtml(c.codigo)}" data-tipo="opciones">
+                    <div class="ctrl-nombre">${escapeHtml(c.nombre)}</div>
+                    <div class="ctrl-opciones">
+                        ${opciones.map((o) =>
+                            `<button type="button" class="pill" data-valor="${escapeHtml(String(o.valor))}">
+                                ${escapeHtml(o.label ?? String(o.valor))}
+                                <span class="text-dim small">${o.puntos} pt</span>
+                            </button>`
+                        ).join("")}
+                    </div>
+                </div>`;
+        }
+        // Default: si_no
+        return `
+            <div class="ctrl ctrl--si-no" data-codigo="${escapeHtml(c.codigo)}" data-tipo="si_no">
+                <label class="ctrl-toggle">
+                    <input type="checkbox" ${v === true ? "checked" : ""} />
+                    <span class="ctrl-nombre">
+                        ${escapeHtml(c.nombre)}
+                        <span class="text-dim small">+${c.puntos} pt</span>
+                    </span>
+                </label>
+            </div>`;
+    }
+
+    function conectarEventosControles(el, m) {
+        const prog = state.progresoMisiones[m.id];
+
+        el.querySelectorAll(".ctrl").forEach((ctrl) => {
+            const codigo = ctrl.dataset.codigo;
+            const tipo   = ctrl.dataset.tipo;
+
+            if (tipo === "si_no") {
+                const chk = ctrl.querySelector('input[type="checkbox"]');
+                chk.addEventListener("change", () => {
+                    if (!puedeEditarMisiones()) {
+                        chk.checked = !chk.checked;
+                        toast("Inicia la partida para marcar controles", "info");
+                        return;
+                    }
+                    if (prog.fallada) prog.fallada = false;
+                    prog.valores[codigo] = chk.checked;
+                    aplicarEstadoMision(el, m);
+                    actualizarScoreTotal();
+                });
+            } else if (tipo === "contador") {
+                const max    = parseInt(ctrl.dataset.max, 10) || 0;
+                const valorEl = ctrl.querySelector("[data-valor]");
+                ctrl.querySelectorAll("button[data-accion]").forEach((btn) => {
+                    btn.addEventListener("click", () => {
+                        if (!puedeEditarMisiones()) {
+                            toast("Inicia la partida para marcar controles", "info");
+                            return;
+                        }
+                        if (prog.fallada) prog.fallada = false;
+                        const actual = Number(prog.valores[codigo] || 0);
+                        const nuevo  = btn.dataset.accion === "mas"
+                            ? Math.min(max, actual + 1)
+                            : Math.max(0, actual - 1);
+                        prog.valores[codigo] = nuevo;
+                        valorEl.textContent = nuevo;
+                        aplicarEstadoMision(el, m);
+                        actualizarScoreTotal();
+                    });
+                });
+            } else if (tipo === "opciones") {
+                ctrl.querySelectorAll(".pill").forEach((pill) => {
+                    pill.addEventListener("click", () => {
+                        if (!puedeEditarMisiones()) {
+                            toast("Inicia la partida para marcar controles", "info");
+                            return;
+                        }
+                        if (prog.fallada) prog.fallada = false;
+                        const valor = pill.dataset.valor;
+                        // Toggle: si ya estaba seleccionado, deseleccionar.
+                        prog.valores[codigo] = (prog.valores[codigo] === valor) ? null : valor;
+                        aplicarEstadoMision(el, m);
+                        actualizarScoreTotal();
+                    });
+                });
+            }
         });
-        el.querySelectorAll(".bonus-chip").forEach((c) => {
-            c.classList.toggle("activo", prog.bonus.has(c.dataset.bonus));
+
+        const btnFail = el.querySelector('[data-accion="fail"]');
+        btnFail.addEventListener("click", () => {
+            if (!puedeEditarMisiones()) {
+                toast("Inicia la partida para marcar misiones", "info");
+                return;
+            }
+            prog.fallada = !prog.fallada;
+            if (prog.fallada) prog.valores = {};
+            // Refrescar toda la tarjeta para resincronizar los controles
+            const nueva = crearTarjetaMision(m);
+            el.replaceWith(nueva);
+            actualizarScoreTotal();
+        });
+
+        const btnReset = el.querySelector('[data-accion="reset"]');
+        btnReset.addEventListener("click", () => {
+            if (!puedeEditarMisiones()) {
+                toast("Inicia la partida primero", "info");
+                return;
+            }
+            state.progresoMisiones[m.id] = nuevoEstadoMision();
+            const nueva = crearTarjetaMision(m);
+            el.replaceWith(nueva);
+            actualizarScoreTotal();
+        });
+    }
+
+    /** Aplica estilos (completada/fallada/parcial) y actualiza la barra. */
+    function aplicarEstadoMision(el, m) {
+        const prog = state.progresoMisiones[m.id];
+        const pct  = porcentajeMision(m, prog);
+        const pts  = puntajeMision(m, prog);
+        const done = misionCompletada(m, prog);
+
+        el.classList.remove("completada", "fallada", "parcial");
+        if (prog.fallada)   el.classList.add("fallada");
+        else if (done)      el.classList.add("completada");
+        else if (pts > 0)   el.classList.add("parcial");
+
+        const sc  = el.querySelector("[data-score]");
+        const pc  = el.querySelector("[data-pct]");
+        const bar = el.querySelector("[data-bar]");
+        if (sc)  sc.textContent = pts;
+        if (pc)  pc.textContent = `${pct}%`;
+        if (bar) bar.style.width = `${pct}%`;
+
+        // Sincroniza controles (por si el estado cambió desde fuera)
+        el.querySelectorAll(".ctrl").forEach((ctrl) => {
+            const codigo = ctrl.dataset.codigo;
+            const valor  = prog.valores[codigo];
+            if (ctrl.dataset.tipo === "si_no") {
+                const chk = ctrl.querySelector('input[type="checkbox"]');
+                if (chk) chk.checked = valor === true;
+            } else if (ctrl.dataset.tipo === "contador") {
+                const v = ctrl.querySelector("[data-valor]");
+                if (v) v.textContent = Math.max(0, Math.min(
+                    parseInt(ctrl.dataset.max, 10) || 0, Number(valor) || 0));
+            } else if (ctrl.dataset.tipo === "opciones") {
+                ctrl.querySelectorAll(".pill").forEach((p) => {
+                    p.classList.toggle("activo", p.dataset.valor === String(valor));
+                });
+            }
         });
     }
 
@@ -480,15 +604,7 @@ const ModuloScorer = (() => {
     //  Cálculo de puntajes
     // --------------------------------------------------------------
     function puntajePorMision(m) {
-        const prog = state.progresoMisiones[m.id];
-        if (!prog) return 0;
-        if (prog.estado === "fail") return 0;
-        let total = 0;
-        if (prog.estado === "ok") total += (m.puntos_base || 0);
-        (m.bonus || []).forEach((b) => {
-            if (prog.bonus.has(b.codigo)) total += (b.puntos || 0);
-        });
-        return total;
+        return puntajeMision(m, state.progresoMisiones[m.id]);
     }
 
     /** Permite editar misiones tanto durante la partida como después de
@@ -502,9 +618,16 @@ const ModuloScorer = (() => {
         return state.misiones.reduce((s, m) => s + puntajePorMision(m), 0);
     }
 
+    function maximoPosible() {
+        return state.misiones.reduce((s, m) => s + maxMision(m), 0);
+    }
+
     function actualizarScoreTotal() {
         const el = document.getElementById("crono-score");
-        if (el) el.textContent = `${puntajeTotal()} pts`;
+        if (el) {
+            const mx = maximoPosible();
+            el.textContent = `${puntajeTotal()} / ${mx} pts`;
+        }
     }
 
     // --------------------------------------------------------------
@@ -625,7 +748,7 @@ const ModuloScorer = (() => {
         state.partidaRegistrada = false;
         state.restante          = state.duracion;
         state.misiones.forEach((m) => {
-            state.progresoMisiones[m.id] = { estado: null, bonus: new Set() };
+            state.progresoMisiones[m.id] = nuevoEstadoMision();
         });
         const btnRegistrar = document.getElementById("btn-registrar");
         btnRegistrar.hidden   = true;
@@ -648,7 +771,7 @@ const ModuloScorer = (() => {
         state.partidaRegistrada = false;
         state.restante          = state.duracion;
         state.misiones.forEach((m) => {
-            state.progresoMisiones[m.id] = { estado: null, bonus: new Set() };
+            state.progresoMisiones[m.id] = nuevoEstadoMision();
         });
         state.baseAzul = [];
         state.baseRoja = [];
@@ -735,17 +858,26 @@ const ModuloScorer = (() => {
             console.warn("Cuadrilla/dupla no creadas:", err.message);
         }
 
-        // Misiones registradas (solo las que tienen estado)
+        // Misiones registradas: solo aquellas con valor distinto al inicial
+        // (fallada, o con algún control activo). Cada fila incluye:
+        //   - completada: true si el puntaje = máximo teórico
+        //   - fallada:    toggle manual
+        //   - bonus_obtenidos: snapshot de los valores de los controles
+        //   - puntaje: puntos sumados
         const misionesPayload = state.misiones
             .map((m) => {
                 const p = state.progresoMisiones[m.id];
-                if (!p.estado) return null;
+                const pts = puntajePorMision(m);
+                const tieneValores = Object.values(p.valores || {})
+                    .some((v) => v === true || (typeof v === "number" && v > 0)
+                              || (typeof v === "string" && v.length > 0));
+                if (!p.fallada && !tieneValores) return null;
                 return {
                     mision_id: m.id,
-                    completada: p.estado === "ok",
-                    fallada:    p.estado === "fail",
-                    bonus_obtenidos: [...p.bonus],
-                    puntaje: puntajePorMision(m),
+                    completada: misionCompletada(m, p),
+                    fallada:    !!p.fallada,
+                    bonus_obtenidos: p.valores || {},
+                    puntaje: pts,
                 };
             })
             .filter(Boolean);

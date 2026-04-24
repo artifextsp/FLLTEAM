@@ -140,6 +140,80 @@ function debounce(fn, ms = 300) {
     };
 }
 
+// =====================================================================
+//  Helpers de puntaje por MISIÓN con "controles tipados".
+//  -------------------------------------------------------------------
+//  El campo `bonus` en la tabla `misiones` es un arreglo de controles
+//  con uno de estos tipos:
+//    si_no     → {codigo, nombre, puntos}
+//    contador  → {codigo, nombre, puntos, max}
+//    opciones  → {codigo, nombre, opciones:[{valor, puntos, label}]}
+//  Para retrocompat, un control sin `tipo` se asume si_no.
+// =====================================================================
+
+/** Máximo teórico de puntos posibles en una misión. */
+function maxMision(m) {
+    let total = m.puntos_base || 0;
+    const controles = Array.isArray(m.bonus) ? m.bonus : [];
+    for (const c of controles) {
+        if (c.tipo === "contador") {
+            total += (c.puntos || 0) * (c.max || 0);
+        } else if (c.tipo === "opciones") {
+            const mx = (c.opciones || []).reduce(
+                (x, o) => Math.max(x, o.puntos || 0), 0);
+            total += mx;
+        } else {
+            total += c.puntos || 0;
+        }
+    }
+    return total;
+}
+
+/**
+ * Puntaje actual de una misión a partir del estado de sus controles.
+ *   `estado = { fallada: bool, valores: { [codigo]: valor } }`
+ *   valor según tipo:
+ *     si_no    → true/false
+ *     contador → entero 0..max
+ *     opciones → valor de la opción seleccionada
+ */
+function puntajeMision(m, estado) {
+    if (!estado || estado.fallada) return 0;
+    const controles = Array.isArray(m.bonus) ? m.bonus : [];
+    let total = 0;
+    for (const c of controles) {
+        const v = estado.valores?.[c.codigo];
+        if (v == null) continue;
+        if (c.tipo === "contador") {
+            total += Math.max(0, Math.min(c.max || 0, Number(v) || 0)) * (c.puntos || 0);
+        } else if (c.tipo === "opciones") {
+            const op = (c.opciones || []).find((o) => String(o.valor) === String(v));
+            if (op) total += op.puntos || 0;
+        } else {
+            if (v === true) total += c.puntos || 0;
+        }
+    }
+    // puntos_base solo si no hay controles activos equivalentes y el legacy
+    // marcaba "completada" explícita. En el nuevo modelo puntos_base=0.
+    if ((m.puntos_base || 0) > 0 && estado.completadaLegacy) {
+        total += m.puntos_base;
+    }
+    return total;
+}
+
+/** Porcentaje redondeado de cumplimiento (0..100). */
+function porcentajeMision(m, estado) {
+    const mx = maxMision(m);
+    if (mx <= 0) return 0;
+    return Math.round((puntajeMision(m, estado) / mx) * 100);
+}
+
+/** Devuelve `true` si el estado de la misión equivale a Completada (100%). */
+function misionCompletada(m, estado) {
+    const mx = maxMision(m);
+    return mx > 0 && puntajeMision(m, estado) >= mx && !estado.fallada;
+}
+
 /**
  * Guarda/lee el equipo activo en localStorage (persiste entre recargas).
  */

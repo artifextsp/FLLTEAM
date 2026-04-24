@@ -114,11 +114,8 @@ const ModuloLanzadas = (() => {
             .map((mm) => state.misiones.find((m) => m.id === mm.mision_id))
             .filter(Boolean);
 
-        const maxPotencial = misionesOrdenadas.reduce((s, m) => {
-            const bonus = Array.isArray(m.bonus)
-                ? m.bonus.reduce((x, b) => x + (b.puntos || 0), 0) : 0;
-            return s + (m.puntos_base || 0) + bonus;
-        }, 0);
+        const maxPotencial = misionesOrdenadas.reduce(
+            (s, m) => s + maxMision(m), 0);
 
         const posTexto = l.orientacion
             ? `${l.orientacion} · #${l.numero_posicion ?? "-"} · ${l.direccion === "izq_der" ? "izq → der" : "der → izq"}`
@@ -175,9 +172,7 @@ const ModuloLanzadas = (() => {
         li.className = "mision-chip";
         li.dataset.misionId = m.id;
 
-        const maxBonus = Array.isArray(m.bonus)
-            ? m.bonus.reduce((s, b) => s + (b.puntos || 0), 0) : 0;
-        const max = (m.puntos_base || 0) + maxBonus;
+        const max = maxMision(m);
 
         li.innerHTML = `
             <span class="codigo">${escapeHtml(m.codigo)}</span>
