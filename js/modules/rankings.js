@@ -4,6 +4,7 @@
 
 const ModuloRankings = (() => {
     async function render(cont) {
+        const miToken  = Router.tokenActual();
         const equipoId = EquipoActivo.get();
         if (!equipoId) {
             cont.innerHTML = `<div class="card empty">
@@ -51,10 +52,10 @@ const ModuloRankings = (() => {
                 </div>
             </div>`;
 
-        await cargar(equipoId);
+        await cargar(equipoId, miToken);
     }
 
-    async function cargar(equipoId) {
+    async function cargar(equipoId, miToken) {
         const [stats, partidas, jugadores, cuadrillas, duplas] = await Promise.all([
             ApiJugadores.estadisticas(equipoId),
             ApiPartidas.listar(equipoId, 500),
@@ -62,6 +63,7 @@ const ModuloRankings = (() => {
             ApiCuadrillas.listar(equipoId),
             ApiDuplas.listar(equipoId),
         ]);
+        if (miToken != null && !Router.vigente(miToken)) return;
 
         pintarGeneral(stats);
         pintarBase(stats, "azul");
@@ -92,6 +94,7 @@ const ModuloRankings = (() => {
 
     function pintarGeneral(stats) {
         const tbody = document.querySelector("#rk-general tbody");
+        if (!tbody) return;
         const orden = [...stats].sort((a, b) => b.puntos_totales - a.puntos_totales);
         tbody.innerHTML = orden.length === 0
             ? `<tr><td colspan="5" class="text-dim text-c">Sin datos</td></tr>`
@@ -107,6 +110,7 @@ const ModuloRankings = (() => {
 
     function pintarBase(stats, base) {
         const tbody = document.querySelector(`#rk-${base} tbody`);
+        if (!tbody) return;
         const campo = base === "azul" ? "puntos_base_azul" : "puntos_base_roja";
         const campoL= base === "azul" ? "lanzamientos_azul" : "lanzamientos_roja";
         const orden = [...stats]
@@ -145,6 +149,7 @@ const ModuloRankings = (() => {
             .sort((a, b) => b.total - a.total);
 
         const tbody = document.querySelector("#rk-cuadrillas tbody");
+        if (!tbody) return;
         tbody.innerHTML = filas.length === 0
             ? `<tr><td colspan="5" class="text-dim text-c">
                 Aún no se han registrado partidas con nombre de cuadrilla.
@@ -174,6 +179,7 @@ const ModuloRankings = (() => {
             .sort((a, b) => b.total - a.total);
 
         const tbody = document.querySelector("#rk-duplas tbody");
+        if (!tbody) return;
         tbody.innerHTML = filas.length === 0
             ? `<tr><td colspan="6" class="text-dim text-c">
                 Aún no se han registrado partidas con nombre de dupla.

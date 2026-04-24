@@ -7,6 +7,7 @@
 
 const ModuloMisiones = (() => {
     async function render(cont) {
+        const miToken  = Router.tokenActual();
         const equipoId = EquipoActivo.get();
 
         cont.innerHTML = `
@@ -41,14 +42,15 @@ const ModuloMisiones = (() => {
             ApiMisiones.listar(),
             equipoId ? ApiLanzadas.listar(equipoId) : Promise.resolve([]),
         ]);
+        if (!Router.vigente(miToken)) return;
 
-        // Mapa mision_id → lanzada (nombre + posición resumida)
         const mapa = {};
         lanzadas.forEach((l) => {
             l.misiones.forEach((mm) => { mapa[mm.mision_id] = l; });
         });
 
         const tbody = document.querySelector("#tabla-misiones tbody");
+        if (!tbody) return;
         if (misiones.length === 0) {
             tbody.innerHTML = `<tr><td colspan="5" class="text-dim text-c">
                 No hay misiones cargadas. Ejecuta <code>sql/02_seed_unearthed.sql</code>.

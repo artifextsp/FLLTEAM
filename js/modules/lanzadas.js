@@ -63,10 +63,14 @@ const ModuloLanzadas = (() => {
     }
 
     async function cargar() {
+        if (!state) return;
+        const equipoId = state.equipoId;
         const [misiones, lanzadas] = await Promise.all([
             ApiMisiones.listar(),
-            ApiLanzadas.listar(state.equipoId),
+            ApiLanzadas.listar(equipoId),
         ]);
+        // Puede haberse destruido el módulo mientras esperábamos.
+        if (!state) return;
         state.misiones = misiones;
         state.lanzadas = lanzadas;
         pintarDisponibles();
@@ -77,8 +81,10 @@ const ModuloLanzadas = (() => {
     //  Pintado
     // --------------------------------------------------------------
     function pintarDisponibles() {
+        if (!state) return;
         const ul = document.getElementById("lista-disponibles");
         const contador = document.getElementById("disp-contador");
+        if (!ul) return;
         const asignadas = new Set();
         state.lanzadas.forEach((l) =>
             l.misiones.forEach((mm) => asignadas.add(mm.mision_id))
@@ -100,7 +106,9 @@ const ModuloLanzadas = (() => {
     }
 
     function pintarLanzadas() {
+        if (!state) return;
         const cont = document.getElementById("panel-lanzadas");
+        if (!cont) return;
         if (state.lanzadas.length === 0) {
             cont.innerHTML = `<div class="card empty">
                 <h3>Sin lanzadas todavía</h3>
