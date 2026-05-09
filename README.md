@@ -40,7 +40,8 @@ FLLTEAM/
 │   └── modules/              # scorer, equipos, jugadores, misiones, rankings, analisis
 └── sql/
     ├── 01_schema.sql         # Tablas + índices + RLS + vistas + realtime
-    └── 02_seed_unearthed.sql # Misiones UNEARTHED 2025-2026
+    ├── 02_seed_unearthed.sql # Misiones UNEARTHED 2025-2026
+    └── 05_admin_auth.sql     # Admin: usuarios y reset de contraseña
 ```
 
 ---
@@ -65,6 +66,7 @@ FLLTEAM/
 1. Panel Supabase → **SQL Editor** → **New query**.
 2. Pega el contenido de `sql/01_schema.sql` → **Run**. Verás que se crean todas las tablas, vistas, índices y políticas RLS.
 3. Pega el contenido de `sql/02_seed_unearthed.sql` → **Run**. Se insertan las misiones de la temporada. Puedes editar nombres, puntos y bonus aquí sin tocar el frontend.
+4. Pega el contenido de `sql/05_admin_auth.sql` → **Run**. Se crea el módulo de administración de usuarios.
 
 > 💡 **Verificar misiones**: los nombres y puntajes del seed se basan en información pública de la temporada y pueden requerir ajustes. Revisa contra el rulebook oficial y edita la tabla `misiones` con un `UPDATE` o desde **Table Editor**.
 
@@ -129,15 +131,24 @@ Al ser una web estática pura, cualquier hosting estático funciona:
 ## 🧪 Primera vez usando la app
 
 1. Abre la URL y **regístrate** con tu email.
-2. Crea un **equipo** (barra superior → *Equipos*).
-3. Añade 4+ **jugadores** al equipo.
-4. Ve a **Scorer**:
+2. Convierte tu usuario inicial a admin desde SQL Editor:
+
+```sql
+update public.perfiles_usuario
+set rol = 'admin'
+where email = 'tu_correo@dominio.com';
+```
+
+3. Inicia sesión y entra al menú **Admin** para crear usuarios y resetear contraseñas.
+4. Crea un **equipo** (barra superior → *Equipos*).
+5. Añade 4+ **jugadores** al equipo.
+6. Ve a **Scorer**:
    - Arrastra 2 jugadores a Base Azul y 2 a Base Roja.
    - (Opcional) escribe nombres de **Cuadrilla** y **Duplas**.
    - Pulsa **▶ Iniciar** y comienza el entrenamiento de 2:30.
    - Marca misiones como completadas/falladas y aplica bonus.
    - Al finalizar (o al pulsar **Finalizar**) se guarda automáticamente.
-5. Revisa **Rankings** y **Análisis** tras varias partidas.
+7. Revisa **Rankings** y **Análisis** tras varias partidas.
 
 ---
 

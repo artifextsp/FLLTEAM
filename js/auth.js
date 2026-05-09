@@ -33,6 +33,36 @@ const FllAuth = {
         return data?.user || null;
     },
 
+    /** Cambia la contraseña del usuario autenticado. */
+    async cambiarMiPassword(passwordNueva) {
+        const { data, error } = await supabase.auth.updateUser({
+            password: passwordNueva,
+        });
+        if (error) throw error;
+        return data;
+    },
+
+    /** Limpia el flag de cambio obligatorio de contraseña del usuario actual. */
+    async marcarPasswordCambiada() {
+        const { data, error } = await supabase.rpc("marcar_password_cambiada");
+        if (error) throw error;
+        return data;
+    },
+
+    /** Obtiene el perfil del usuario actual desde la DB. */
+    async miPerfil() {
+        const { data, error } = await supabase.rpc("mi_perfil");
+        if (error) throw error;
+        return data || null;
+    },
+
+    /** Devuelve true si el usuario actual es admin y está activo. */
+    async esAdmin() {
+        const { data, error } = await supabase.rpc("es_admin_actual");
+        if (error) throw error;
+        return !!data;
+    },
+
     /**
      * Garantiza que hay sesión iniciada; si no, redirige a login.html.
      * @returns {Promise<import("@supabase/supabase-js").User>}

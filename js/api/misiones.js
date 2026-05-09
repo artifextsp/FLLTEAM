@@ -20,10 +20,13 @@ const ApiMisiones = {
         return data;
     },
 
-    /** Efectividad por misión (vista v_efectividad_mision). */
+    /** Efectividad por misión (vista v_efectividad_mision), solo del coach actual. */
     async efectividad() {
+        const user = await FllAuth.usuarioActual();
         const { data, error } = await supabase
-            .from("v_efectividad_mision").select("*");
+            .from("v_efectividad_mision")
+            .select("*")
+            .eq("coach_id", user.id);
         if (error) throw error;
         return data || [];
     },

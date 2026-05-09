@@ -300,3 +300,64 @@ input:focus, select:focus, textarea:focus {
     text-align: center;
     color: var(--c-text-dim);
 }
+
+/* ----------------------- ALERTAS (análisis) ----------------------- */
+.alertas-stack {
+    display: flex;
+    flex-direction: column;
+    gap: 0.65rem;
+}
+
+.alerta-ficha {
+    border-radius: var(--radius);
+    padding: 0.85rem 1rem;
+    border: 1px solid var(--c-bg-3);
+    background: var(--c-bg);
+}
+
+.alerta-ficha__tit {
+    font-weight: 700;
+    margin-bottom: 0.35rem;
+    font-size: 0.95rem;
+}
+
+.alerta-ficha__txt {
+    font-size: 0.88rem;
+    line-height: 1.35;
+    color: var(--c-text-dim);
+}
+
+.alerta-ficha__acc {
+    margin-top: 0.5rem;
+    font-size: 0.85rem;
+}
+
+.alerta-ficha--neg {
+    border-color: rgba(239, 68, 68, 0.55);
+    background: rgba(239, 68, 68, 0.1);
+}
+.alerta-ficha--neg .alerta-ficha__tit { color: #fca5a5; }
+
+.alerta-ficha--warn {
+    border-color: rgba(245, 158, 11, 0.5);
+    background: rgba(245, 158, 11, 0.08);
+}
+.alerta-ficha--warn .alerta-ficha__tit { color: #fbbf24; }
+
+.alerta-ficha--pos {
+    border-color: rgba(34, 197, 94, 0.5);
+    background: rgba(34, 197, 94, 0.1);
+}
+.alerta-ficha--pos .alerta-ficha__tit { color: #86efac; }
+
+.alerta-ficha--neutro {
+    border-style: dashed;
+    opacity: 0.95;
+}
+
+.purga-botones {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    align-items: center;
+}

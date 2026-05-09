@@ -17,6 +17,52 @@
         grid-template-columns: 1fr 320px;
         gap: 1rem;
         align-items: start;
+        min-width: 0;
+    }
+}
+
+@media (max-width: 719px) {
+    .app-nav {
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+    }
+
+    .app-header {
+        flex-wrap: wrap;
+        gap: 0.5rem;
+    }
+
+    .app-header .selector-equipo {
+        min-width: 0;
+        flex: 1 1 140px;
+        margin-left: 0;
+    }
+
+    .app-main {
+        padding: 0.75rem;
+        padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+    }
+
+    .page-header .acciones {
+        margin-left: 0;
+        width: 100%;
+        justify-content: flex-start;
+    }
+
+    .cronometro-acciones {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .cronometro-acciones .btn {
+        width: 100%;
+    }
+
+    .misiones-grid {
+        grid-template-columns: minmax(0, 1fr);
+    }
+
+    .bases {
+        grid-template-columns: minmax(0, 1fr);
     }
 }
 

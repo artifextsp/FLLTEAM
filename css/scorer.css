@@ -391,3 +391,65 @@
 
 /* Scorer deshabilitado (antes de iniciar partida) */
 .scorer--inactivo .misiones-grid { opacity: 0.55; pointer-events: none; }
+
+/* ---------- CTA: siguiente control / iniciar ---------- */
+.btn--cta-pulse {
+    box-shadow:
+        0 0 0 2px rgba(59, 130, 246, 0.9),
+        0 0 24px rgba(59, 130, 246, 0.45);
+    animation: cta-pulse 1.4s ease-in-out infinite alternate;
+}
+
+@keyframes cta-pulse {
+    from { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5), 0 0 12px rgba(59, 130, 246, 0.25); }
+    to   { box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.95), 0 0 28px rgba(59, 130, 246, 0.5); }
+}
+
+.mision-tarjeta--foco {
+    border-color: rgba(96, 165, 250, 0.85) !important;
+    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35), 0 8px 28px rgba(0, 0, 0, 0.35);
+}
+
+.ctrl--siguiente {
+    border-color: rgba(52, 211, 153, 0.9) !important;
+    background: rgba(52, 211, 153, 0.12) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(52, 211, 153, 0.4),
+        0 0 0 2px rgba(52, 211, 153, 0.35);
+    position: relative;
+}
+
+.ctrl--siguiente::before {
+    content: "Siguiente";
+    position: absolute;
+    top: -0.65rem;
+    right: 0.4rem;
+    font-size: 0.62rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #34d399;
+    background: var(--c-bg-2);
+    padding: 2px 6px;
+    border-radius: 4px;
+    border: 1px solid rgba(52, 211, 153, 0.5);
+    pointer-events: none;
+}
+
+.slot-vacio--foco {
+    border-color: rgba(251, 191, 36, 0.85) !important;
+    background: rgba(251, 191, 36, 0.12) !important;
+    color: #fde68a !important;
+    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25);
+}
+
+.pill:not(.activo):hover {
+    border-color: var(--c-primary);
+    background: rgba(59, 130, 246, 0.12);
+}
+
+.ctrl--siguiente.ctrl--si-no .ctrl-toggle {
+    outline: 2px solid rgba(52, 211, 153, 0.6);
+    outline-offset: 2px;
+    border-radius: var(--radius);
+}

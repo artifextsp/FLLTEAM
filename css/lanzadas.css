@@ -239,3 +239,41 @@
 @media (max-width: 500px) {
     .grid-3 { grid-template-columns: 1fr; }
 }
+
+/* Resumen de tiempos (150s partida) */
+.lanzadas-resumen__grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin: 0.75rem 0;
+}
+
+@media (max-width: 640px) {
+    .lanzadas-resumen__grid { grid-template-columns: 1fr; }
+}
+
+.lanzadas-resumen__col {
+    padding: 0.75rem;
+    border-radius: var(--radius);
+    border: 1px solid var(--c-bg-3);
+    background: var(--c-bg);
+}
+
+.lanzadas-resumen__col--azul {
+    border-left: 4px solid var(--c-base-azul);
+}
+
+.lanzadas-resumen__col--roja {
+    border-left: 4px solid var(--c-base-roja);
+}
+
+.lanzadas-resumen__col h4 {
+    margin: 0 0 0.4rem 0;
+    font-size: 0.95rem;
+}
+
+.lanzadas-resumen__alerta {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    color: var(--c-danger);
+}

@@ -19,14 +19,15 @@ const ModuloAnalisis = (() => {
             <div class="card">
                 <h3>🚀 Efectividad por lanzada (recorrido)</h3>
                 <p class="text-dim small">
-                    Incluye el tiempo planificado del recorrido (segundos) para ver
-                    qué lanzadas conviene acortar. Ordenado por promedio de puntos por partida.
+                    Orden: de menor a mayor efectividad. Incluye puntos máximos de la lanzada
+                    y el tiempo planificado del recorrido (segundos).
                 </p>
                 <div class="tabla-wrap">
                     <table class="tabla tabla--compact" id="tbl-lanzadas">
                         <thead>
                             <tr>
                                 <th>Lanzada</th>
+                                <th title="Suma de puntos máximos de las misiones de esta lanzada">Pts lanzada</th>
                                 <th>Base</th>
                                 <th>Tiempo</th>
                                 <th>Posición</th>
@@ -47,6 +48,7 @@ const ModuloAnalisis = (() => {
 
             <div class="card">
                 <h3>🧩 Efectividad por misión</h3>
+                <p class="text-dim small">Orden: de menor a mayor efectividad (%).</p>
                 <div class="tabla-wrap">
                     <table class="tabla tabla--compact" id="tbl-efectividad">
                         <thead>
@@ -72,9 +74,12 @@ const ModuloAnalisis = (() => {
                 </div>
             </div>
 
-            <div class="card" id="card-bajas">
-                <h3>⚠ Misiones con baja efectividad o tendencia decreciente</h3>
-                <ul class="item-list" id="lista-bajas"></ul>
+            <div class="card" id="card-alertas">
+                <h3>Campana de alertas</h3>
+                <p class="text-dim small">
+                    Revisa estas señales tras varias lanzadas seguidas: ajustes, inconsistencia o estabilidad.
+                </p>
+                <div class="alertas-stack" id="lista-alertas"></div>
             </div>`;
 
         await cargar(equipoId);
@@ -86,7 +91,7 @@ const ModuloAnalisis = (() => {
 
     async function cargar(equipoId) {
         const [efec, tend, misiones, efecLanzadas, lanzadas] = await Promise.all([
-            ApiMisiones.efectividad(),                   // vista
+            ApiMisiones.efectividad(),
             ApiPartidas.tendenciaPorMision(equipoId),
             ApiMisiones.listar(),
             ApiLanzadas.efectividad(equipoId),
@@ -103,10 +108,10 @@ const ModuloAnalisis = (() => {
         sel.addEventListener("change", () => pintarTendencia(sel.value, tend));
         if (misiones.length) pintarTendencia(misiones[0].id, tend);
 
-        pintarAlertasBajas(efec, tend, misiones);
+        pintarSistemaAlertas(efec, tend, misiones, equipoId);
     }
 
-    function pintarEfectividadLanzadas(efec, lanzadas, misiones) {
+    function puntarEfectividadLanzadas(efec, lanzadas, misiones) {
         const misById = Object.fromEntries(misiones.map((m) => [m.id, m]));
         const enlacesPorLan = {};
         lanzadas.forEach((l) => {
@@ -114,13 +119,12 @@ const ModuloAnalisis = (() => {
         });
 
         const filas = [...efec].sort(
-            (a, b) => (b.promedio_puntos_por_partida || 0) -
-                      (a.promedio_puntos_por_partida || 0)
+            (a, b) => (Number(a.efectividad_pct || 0)) - (Number(b.efectividad_pct || 0))
         );
 
         const tbody = document.querySelector("#tbl-lanzadas tbody");
         if (filas.length === 0) {
-            tbody.innerHTML = `<tr><td colspan="12" class="text-dim text-c">
+            tbody.innerHTML = `<tr><td colspan="13" class="text-dim text-c">
                 No hay lanzadas configuradas. Créalas en la pestaña
                 <a href="#lanzadas">Lanzadas</a>.
             </td></tr>`;
@@ -128,6 +132,8 @@ const ModuloAnalisis = (() => {
         }
 
         tbody.innerHTML = filas.map((f) => {
+            const misionesLan = enlacesPorLan[f.lanzada_id] || [];
+            const ptsLanzada = misionesLan.reduce((s, m) => s + maxMision(m), 0);
             const baseChip = f.base
                 ? `<span class="chip chip--${f.base} chip--xs">${f.base === "azul" ? "Azul" : "Roja"}</span>`
                 : `<span class="text-dim small">—</span>`;
@@ -144,7 +150,7 @@ const ModuloAnalisis = (() => {
                 ? `${escapeHtml(f.orientacion)} · #${f.numero_posicion ?? "-"} ·
                    ${f.direccion === "izq_der" ? "izq→der" : "der→izq"}`
                 : `<span class="text-dim small">Sin posición</span>`;
-            const misionesList = (enlacesPorLan[f.lanzada_id] || [])
+            const misionesList = misionesLan
                 .map((m) => `<span class="chip chip--xs">${escapeHtml(m.codigo)}</span>`)
                 .join(" ") || `<span class="text-dim small">sin misiones</span>`;
             const efPct = Number(f.efectividad_pct || 0);
@@ -153,6 +159,7 @@ const ModuloAnalisis = (() => {
                                        : "badge--bueno";
             return `<tr>
                 <td><strong>${escapeHtml(f.nombre)}</strong></td>
+                <td><strong>${ptsLanzada}</strong> pt</td>
                 <td>${baseChip}</td>
                 <td>${tiempoCell}</td>
                 <td class="small">${posTxt}</td>
@@ -172,12 +179,16 @@ const ModuloAnalisis = (() => {
         const byId = {};
         efec.forEach((e) => { byId[e.mision_id] = e; });
         const tbody = document.querySelector("#tbl-efectividad tbody");
-        tbody.innerHTML = misiones.map((m) => {
+        const filas = misiones.map((m) => {
             const e = byId[m.id] || {};
             const intentos = e.veces_intentada || 0;
             const ok       = e.veces_completada || 0;
             const fail     = e.veces_fallada || 0;
-            const pct      = e.efectividad_pct || 0;
+            const pct      = Number(e.efectividad_pct || 0);
+            return { m, intentos, ok, fail, pct };
+        }).sort((a, b) => a.pct - b.pct);
+
+        tbody.innerHTML = filas.map(({ m, intentos, ok, fail, pct }) => {
             const clase    = pct < 50 ? "text-dim" : "";
             return `<tr class="${clase}">
                 <td><code>${escapeHtml(m.codigo)}</code></td>
@@ -191,12 +202,10 @@ const ModuloAnalisis = (() => {
     }
 
     function pintarTendencia(misionId, datos) {
-        // Filtra filas de esa misión, ordena por fecha
         const filas = datos
             .filter((d) => d.mision_id === misionId && d.partidas?.fecha_hora)
             .sort((a, b) => new Date(a.partidas.fecha_hora) - new Date(b.partidas.fecha_hora));
 
-        // Calcula porcentaje acumulado rolling (hasta cada punto)
         let ok = 0, total = 0;
         const labels = [];
         const serie  = [];
@@ -258,17 +267,52 @@ const ModuloAnalisis = (() => {
         });
     }
 
-    function pintarAlertasBajas(efec, tendencia, misiones) {
+    function secuenciaMision(tendencia, misionId) {
+        return tendencia
+            .filter((d) => d.mision_id === misionId && d.partidas?.fecha_hora)
+            .sort((a, b) => new Date(a.partidas.fecha_hora) - new Date(b.partidas.fecha_hora));
+    }
+
+    function esExitoIntento(f) {
+        return !!f.completada && !f.fallada;
+    }
+
+    function esFalloIntento(f) {
+        return !!f.fallada || !f.completada;
+    }
+
+    function rachaDesdeElFinal(arr, okFn) {
+        let n = 0;
+        for (let i = arr.length - 1; i >= 0; i--) {
+            if (okFn(arr[i])) n += 1;
+            else break;
+        }
+        return n;
+    }
+
+    function contarTransicionesExito(arr) {
+        if (arr.length < 2) return 0;
+        let t = 0;
+        for (let i = 1; i < arr.length; i++) {
+            if (esExitoIntento(arr[i]) !== esExitoIntento(arr[i - 1])) t += 1;
+        }
+        return t;
+    }
+
+    function desviacion(arr) {
+        if (arr.length < 2) return 0;
+        const mean = arr.reduce((s, x) => s + x, 0) / arr.length;
+        const v = arr.reduce((s, x) => s + (x - mean) ** 2, 0) / arr.length;
+        return Math.sqrt(v);
+    }
+
+    function pintarSistemaAlertas(efec, tendencia, misiones, equipoId) {
         const byId = {};
         efec.forEach((e) => { byId[e.mision_id] = e; });
 
-        // Tendencia decreciente: comparar la efectividad de la primera mitad
-        // vs la segunda mitad de los intentos.
         const decrecientes = new Set();
         misiones.forEach((m) => {
-            const filas = tendencia
-                .filter((d) => d.mision_id === m.id)
-                .sort((a, b) => new Date(a.partidas.fecha_hora) - new Date(b.partidas.fecha_hora));
+            const filas = secuenciaMision(tendencia, m.id);
             if (filas.length < 4) return;
             const mitad = Math.floor(filas.length / 2);
             const pct = (arr) => {
@@ -278,28 +322,102 @@ const ModuloAnalisis = (() => {
             };
             const a = pct(filas.slice(0, mitad));
             const b = pct(filas.slice(mitad));
-            if (b < a - 10) decrecientes.add(m.id);   // cae >10 pp
+            if (b < a - 10) decrecientes.add(m.id);
         });
 
-        const ul = document.getElementById("lista-bajas");
-        const filas = misiones.filter((m) => {
+        /** @type {{clase: string, titulo: string, texto: string, misionId: string}[]} */
+        const items = [];
+
+        misiones.forEach((m) => {
+            const arr = secuenciaMision(tendencia, m.id);
+            if (arr.length < 3) return;
+
+            const mx = maxMision(m);
+            const rachaFallos = rachaDesdeElFinal(arr, esFalloIntento);
+            const rachaOk = rachaDesdeElFinal(arr, esExitoIntento);
+
+            const ult = arr.slice(-6);
+            const trans = contarTransicionesExito(ult);
+            const pts = ult.map((f) => Number(f.puntaje) || 0);
+            const sd = desviacion(pts);
+            const cv = mx > 0 ? sd / mx : 0;
+
+            if (rachaFallos >= 3) {
+                items.push({
+                    clase: "alerta-ficha--neg",
+                    titulo: "Ajuste sugerido (racha de fallos)",
+                    texto: `${m.codigo} · ${m.nombre_es}: en las últimas ${rachaFallos} lanzadas con registro, el resultado no fue completado correctamente. Conviene revisar la lanzada o la misión.`,
+                    misionId: m.id,
+                });
+            }
+
+            if (ult.length >= 5 && (trans >= 4 || cv >= 0.28)) {
+                items.push({
+                    clase: "alerta-ficha--warn",
+                    titulo: "Inconsistencia",
+                    texto: `${m.codigo} · ${m.nombre_es}: el desempeño oscila entre lanzadas (cambios frecuentes de éxito/fallo o puntaje variable). Estabilizar proceso o revisar roles.`,
+                    misionId: m.id,
+                });
+            }
+
+            if (rachaOk >= 5) {
+                items.push({
+                    clase: "alerta-ficha--pos",
+                    titulo: "Estabilidad alcanzada",
+                    texto: `${m.codigo} · ${m.nombre_es}: ${rachaOk} lanzadas seguidas completadas correctamente. Buen momento para documentar o subir dificultad.`,
+                    misionId: m.id,
+                });
+            }
+        });
+
+        misiones.forEach((m) => {
             const e = byId[m.id];
-            if (!e || (e.veces_intentada || 0) === 0) return false;
-            return (e.efectividad_pct < 50) || decrecientes.has(m.id);
+            if (!e || (e.veces_intentada || 0) === 0) return;
+            if ((e.efectividad_pct < 50) || decrecientes.has(m.id)) {
+                const etiqueta = decrecientes.has(m.id) ? "Tendencia decreciente" : "Efectividad global baja";
+                items.push({
+                    clase: "alerta-ficha--warn",
+                    titulo: "Revisar desempeño histórico",
+                    texto: `${m.codigo} · ${m.nombre_es}: ${e.efectividad_pct}% en ${e.veces_intentada} intentos · ${etiqueta}.`,
+                    misionId: m.id,
+                });
+            }
         });
 
-        ul.innerHTML = filas.length === 0
-            ? `<li class="text-dim">Sin alertas. ¡Buen trabajo!</li>`
-            : filas.map((m) => {
-                const e = byId[m.id];
-                const etiqueta = decrecientes.has(m.id) ? "📉 Tendencia decreciente" : "⚠ Efectividad baja";
-                return `<li>
-                    <div>
-                        <strong>${escapeHtml(m.codigo)} · ${escapeHtml(m.nombre_es)}</strong>
-                        <div class="text-dim small">${e.efectividad_pct}% en ${e.veces_intentada} intentos · ${etiqueta}</div>
-                    </div>
-                </li>`;
-            }).join("");
+        const cont = document.getElementById("lista-alertas");
+        if (!cont) return;
+
+        if (items.length === 0) {
+            cont.innerHTML = `<div class="alerta-ficha alerta-ficha--neutro">
+                <div class="alerta-ficha__tit">Sin alertas por ahora</div>
+                <div class="text-dim small">Cuando acumules más lanzadas registradas aparecerán avisos de ajuste, inconsistencia o estabilidad.</div>
+            </div>`;
+            return;
+        }
+
+        const ver = `<a href="#" class="link-ver-mision" data-equipo="${escapeHtml(equipoId)}">Ver en tendencia ↓</a>`;
+
+        cont.innerHTML = items.map((it) => `
+            <div class="alerta-ficha ${it.clase}" data-mision-alert="${it.misionId}">
+                <div class="alerta-ficha__tit">${escapeHtml(it.titulo)}</div>
+                <div class="alerta-ficha__txt">${escapeHtml(it.texto)}</div>
+                <div class="alerta-ficha__acc">${ver}</div>
+            </div>
+        `).join("");
+
+        cont.querySelectorAll(".link-ver-mision").forEach((a) => {
+            a.addEventListener("click", (ev) => {
+                ev.preventDefault();
+                const card = a.closest(".alerta-ficha");
+                const mid = card?.getAttribute("data-mision-alert");
+                const sel = document.getElementById("sel-mision");
+                if (mid && sel) {
+                    sel.value = mid;
+                    sel.dispatchEvent(new Event("change", { bubbles: true }));
+                    sel.scrollIntoView({ behavior: "smooth", block: "center" });
+                }
+            });
+        });
     }
 
     return { render, destroy };

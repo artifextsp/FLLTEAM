@@ -39,6 +39,7 @@ const ModuloLanzadas = (() => {
                 para comparar y optimizar. Arrastra las misiones que lo componen;
                 una misión solo puede estar en una lanzada por equipo.
             </p>
+            <div class="card lanzadas-resumen" id="lanzadas-resumen" hidden></div>
             <div class="lanzadas-layout">
                 <aside class="lanzadas-disponibles card" id="panel-disponibles">
                     <h3>
@@ -75,6 +76,72 @@ const ModuloLanzadas = (() => {
         state.lanzadas = lanzadas;
         pintarDisponibles();
         pintarLanzadas();
+        pintarResumenTiempos(state.lanzadas);
+    }
+
+    const PARTIDA_FLL_SEG = 150;
+
+    function pintarResumenTiempos(lanzadas) {
+        const el = document.getElementById("lanzadas-resumen");
+        if (!el) return;
+        if (!lanzadas.length) {
+            el.hidden = true;
+            el.innerHTML = "";
+            return;
+        }
+        el.hidden = false;
+        const byBase = { azul: [], roja: [] };
+        lanzadas.forEach((l) => {
+            const t = Number(l.tiempo_recorrido_seg) || 0;
+            if (l.base === "azul" || l.base === "roja") {
+                byBase[l.base].push({ nombre: l.nombre, t });
+            }
+        });
+
+        function bloqueBase(titulo, key) {
+            const arr = byBase[key];
+            const sum = arr.reduce((s, x) => s + x.t, 0);
+            const n = arr.length;
+            let transicionTxt = "—";
+            let alerta = "";
+            if (n === 1) {
+                const resto = PARTIDA_FLL_SEG - sum;
+                transicionTxt = `${resto}s orientativos fuera de ese recorrido dentro de los ${PARTIDA_FLL_SEG}s.`;
+            } else if (n > 1) {
+                const huecos = n - 1;
+                const porHueco = (PARTIDA_FLL_SEG - sum) / huecos;
+                transicionTxt =
+                    `~${porHueco.toFixed(1)}s promedio por hueco entre lanzadas (${huecos} transición(es); partida ${PARTIDA_FLL_SEG}s).`;
+            }
+            if (n > 0 && (PARTIDA_FLL_SEG - sum) < 0) {
+                alerta = `<p class="lanzadas-resumen__alerta">La suma de recorridos (${sum}s) supera ${PARTIDA_FLL_SEG}s — ajusta tiempos.</p>`;
+            }
+            return `<div class="lanzadas-resumen__col lanzadas-resumen__col--${key}">
+                <h4>${titulo}</h4>
+                <p><strong>${sum}s</strong> en ${n} lanzada(s)</p>
+                <p class="text-dim small">${transicionTxt}</p>
+                ${alerta}
+            </div>`;
+        }
+
+        const sumTotal = lanzadas.reduce(
+            (s, l) => s + (Number(l.tiempo_recorrido_seg) || 0), 0);
+
+        el.innerHTML = `
+            <h3 style="margin-top:0;">Tiempos por base y transiciones</h3>
+            <p class="text-dim small">
+                Suma los tiempos de recorrido planificados por base y reparte el tiempo
+                restante hasta ${PARTIDA_FLL_SEG}s entre los huecos entre lanzadas (cambios de mecanismo).
+                En competición ambas bases comparten la misma ventana de ${PARTIDA_FLL_SEG}s.
+            </p>
+            <div class="lanzadas-resumen__grid">
+                ${bloqueBase("Base azul", "azul")}
+                ${bloqueBase("Base roja", "roja")}
+            </div>
+            <p class="text-dim small" style="margin-bottom:0;">
+                Suma de <em>todos</em> los recorridos: <strong>${sumTotal}s</strong>
+                (referencia; en mesa real los recorridos de ambas bases son en paralelo).
+            </p>`;
     }
 
     // --------------------------------------------------------------

@@ -16,37 +16,38 @@ const ModuloRankings = (() => {
             <div class="page-header"><h2>Rankings</h2></div>
             <div class="grid">
                 <div class="card">
-                    <h3>🏆 General (por puntos totales)</h3>
+                    <h3>🏆 General (% vs puntaje máximo del tapete)</h3>
+                    <p class="text-dim small">Orden: mayor porcentaje al menor (promedio por jugador respecto al máximo teórico ÷ 4).</p>
                     <div class="tabla-wrap"><table class="tabla tabla--compact" id="rk-general">
-                        <thead><tr><th>#</th><th>Jugador</th><th>Total</th><th>Prom.</th><th>Lanz.</th></tr></thead>
+                        <thead><tr><th>#</th><th>Jugador</th><th>% máx</th><th>Total</th><th>Prom.</th><th>Lanz.</th></tr></thead>
                         <tbody></tbody>
                     </table></div>
                 </div>
                 <div class="card">
                     <h3>🔵 Por Base Azul</h3>
                     <div class="tabla-wrap"><table class="tabla tabla--compact" id="rk-azul">
-                        <thead><tr><th>#</th><th>Jugador</th><th>Pts Azul</th><th>Lanz.</th></tr></thead>
+                        <thead><tr><th>#</th><th>Jugador</th><th>% máx</th><th>Pts Azul</th><th>Lanz.</th></tr></thead>
                         <tbody></tbody>
                     </table></div>
                 </div>
                 <div class="card">
                     <h3>🔴 Por Base Roja</h3>
                     <div class="tabla-wrap"><table class="tabla tabla--compact" id="rk-roja">
-                        <thead><tr><th>#</th><th>Jugador</th><th>Pts Roja</th><th>Lanz.</th></tr></thead>
+                        <thead><tr><th>#</th><th>Jugador</th><th>% máx</th><th>Pts Roja</th><th>Lanz.</th></tr></thead>
                         <tbody></tbody>
                     </table></div>
                 </div>
                 <div class="card">
                     <h3>🧑‍🤝‍🧑 Cuadrillas (nombradas)</h3>
                     <div class="tabla-wrap"><table class="tabla tabla--compact" id="rk-cuadrillas">
-                        <thead><tr><th>#</th><th>Cuadrilla</th><th>Partidas</th><th>Total</th><th>Prom.</th></tr></thead>
+                        <thead><tr><th>#</th><th>Cuadrilla</th><th>% máx</th><th>Partidas</th><th>Total</th><th>Prom.</th></tr></thead>
                         <tbody></tbody>
                     </table></div>
                 </div>
                 <div class="card">
                     <h3>👥 Duplas (nombradas)</h3>
                     <div class="tabla-wrap"><table class="tabla tabla--compact" id="rk-duplas">
-                        <thead><tr><th>#</th><th>Dupla</th><th>Base</th><th>Partidas</th><th>Total</th><th>Prom.</th></tr></thead>
+                        <thead><tr><th>#</th><th>Dupla</th><th>Base</th><th>% máx</th><th>Partidas</th><th>Total</th><th>Prom.</th></tr></thead>
                         <tbody></tbody>
                     </table></div>
                 </div>
@@ -56,18 +57,22 @@ const ModuloRankings = (() => {
     }
 
     async function cargar(equipoId, miToken) {
-        const [stats, partidas, jugadores, cuadrillas, duplas] = await Promise.all([
+        const [stats, partidas, jugadores, cuadrillas, duplas, misiones] = await Promise.all([
             ApiJugadores.estadisticas(equipoId),
             ApiPartidas.listar(equipoId, 500),
             ApiJugadores.listar(equipoId),
             ApiCuadrillas.listar(equipoId),
             ApiDuplas.listar(equipoId),
+            ApiMisiones.listar(),
         ]);
         if (miToken != null && !Router.vigente(miToken)) return;
 
-        pintarGeneral(stats);
-        pintarBase(stats, "azul");
-        pintarBase(stats, "roja");
+        const maxEquipo = misiones.reduce((s, m) => s + maxMision(m), 0);
+        const maxPorJugador = maxEquipo > 0 ? maxEquipo / 4 : 0;
+
+        pintarGeneral(stats, maxPorJugador);
+        pintarBase(stats, "azul", maxPorJugador);
+        pintarBase(stats, "roja", maxPorJugador);
 
         // Mapas id → nombre para resolver integrantes de cuadrillas y duplas.
         const nombrePorJugador = Object.fromEntries(
@@ -88,40 +93,62 @@ const ModuloRankings = (() => {
                 .map((id) => nombrePorJugador[id]).filter(Boolean);
         });
 
-        pintarCuadrillas(partidas, integrantesCuadrilla);
-        pintarDuplas(partidas, integrantesDupla);
+        pintarCuadrillas(partidas, integrantesCuadrilla, maxEquipo);
+        pintarDuplas(partidas, integrantesDupla, maxEquipo);
     }
 
-    function pintarGeneral(stats) {
+    function pctJugadorVsMax(promedio, maxPorJugador) {
+        if (!maxPorJugador || maxPorJugador <= 0) return 0;
+        return Math.min(100, Math.round((Number(promedio) / maxPorJugador) * 10000) / 100);
+    }
+
+    function pintarGeneral(stats, maxPorJugador) {
         const tbody = document.querySelector("#rk-general tbody");
         if (!tbody) return;
-        const orden = [...stats].sort((a, b) => b.puntos_totales - a.puntos_totales);
+        const conPct = stats.map((s) => ({
+            ...s,
+            pct: pctJugadorVsMax(s.promedio, maxPorJugador),
+        }));
+        const orden = conPct.sort((a, b) => {
+            const d = b.pct - a.pct;
+            return d !== 0 ? d : b.puntos_totales - a.puntos_totales;
+        });
         tbody.innerHTML = orden.length === 0
-            ? `<tr><td colspan="5" class="text-dim text-c">Sin datos</td></tr>`
+            ? `<tr><td colspan="6" class="text-dim text-c">Sin datos</td></tr>`
             : orden.map((s, i) => `
                 <tr>
                     <td>${i + 1}</td>
                     <td>${escapeHtml(s.nombre)}</td>
-                    <td><strong>${s.puntos_totales}</strong></td>
+                    <td><strong>${s.pct}%</strong></td>
+                    <td>${s.puntos_totales}</td>
                     <td>${s.promedio}</td>
                     <td>${s.lanzamientos_totales}</td>
                 </tr>`).join("");
     }
 
-    function pintarBase(stats, base) {
+    function pintarBase(stats, base, maxPorJugador) {
         const tbody = document.querySelector(`#rk-${base} tbody`);
         if (!tbody) return;
         const campo = base === "azul" ? "puntos_base_azul" : "puntos_base_roja";
         const campoL= base === "azul" ? "lanzamientos_azul" : "lanzamientos_roja";
         const orden = [...stats]
             .filter((s) => (s[campo] || 0) > 0)
-            .sort((a, b) => b[campo] - a[campo]);
+            .map((s) => {
+                const lanz = s[campoL] || 0;
+                const promBase = lanz > 0 ? (s[campo] || 0) / lanz : 0;
+                return { ...s, pct: pctJugadorVsMax(promBase, maxPorJugador) };
+            })
+            .sort((a, b) => {
+                const d = b.pct - a.pct;
+                return d !== 0 ? d : (b[campo] - a[campo]);
+            });
         tbody.innerHTML = orden.length === 0
-            ? `<tr><td colspan="4" class="text-dim text-c">Sin datos</td></tr>`
+            ? `<tr><td colspan="5" class="text-dim text-c">Sin datos</td></tr>`
             : orden.map((s, i) => `
                 <tr>
                     <td>${i + 1}</td>
                     <td>${escapeHtml(s.nombre)}</td>
+                    <td><strong>${s.pct}%</strong></td>
                     <td><strong>${s[campo]}</strong></td>
                     <td>${s[campoL]}</td>
                 </tr>`).join("");
@@ -135,7 +162,7 @@ const ModuloRankings = (() => {
         return `${safeNombre} <span class="text-dim small">(${lista})</span>`;
     }
 
-    function pintarCuadrillas(partidas, integrantesCuadrilla) {
+    function pintarCuadrillas(partidas, integrantesCuadrilla, maxEquipo) {
         const mapa = {};
         partidas.forEach((p) => {
             const k = p.cuadrilla_nombre?.trim();
@@ -145,26 +172,36 @@ const ModuloRankings = (() => {
             mapa[k].total    += p.puntaje_total || 0;
         });
         const filas = Object.values(mapa)
-            .map((x) => ({ ...x, promedio: +(x.total / x.partidas).toFixed(2) }))
-            .sort((a, b) => b.total - a.total);
+            .map((x) => {
+                const promedio = +(x.total / x.partidas).toFixed(2);
+                const pct = maxEquipo > 0
+                    ? Math.min(100, Math.round((promedio / maxEquipo) * 10000) / 100)
+                    : 0;
+                return { ...x, promedio, pct };
+            })
+            .sort((a, b) => {
+                const d = b.pct - a.pct;
+                return d !== 0 ? d : b.total - a.total;
+            });
 
         const tbody = document.querySelector("#rk-cuadrillas tbody");
         if (!tbody) return;
         tbody.innerHTML = filas.length === 0
-            ? `<tr><td colspan="5" class="text-dim text-c">
+            ? `<tr><td colspan="6" class="text-dim text-c">
                 Aún no se han registrado partidas con nombre de cuadrilla.
                </td></tr>`
             : filas.map((f, i) => `
                 <tr>
                     <td>${i + 1}</td>
                     <td>${etiquetaConIntegrantes(f.nombre, integrantesCuadrilla[f.nombre])}</td>
+                    <td><strong>${f.pct}%</strong></td>
                     <td>${f.partidas}</td>
                     <td><strong>${f.total}</strong></td>
                     <td>${f.promedio}</td>
                 </tr>`).join("");
     }
 
-    function pintarDuplas(partidas, integrantesDupla) {
+    function pintarDuplas(partidas, integrantesDupla, maxEquipo) {
         const mapa = {};
         partidas.forEach((p) => {
             if (p.dupla_azul_nombre?.trim()) {
@@ -175,13 +212,22 @@ const ModuloRankings = (() => {
             }
         });
         const filas = Object.values(mapa)
-            .map((x) => ({ ...x, promedio: +(x.total / x.partidas).toFixed(2) }))
-            .sort((a, b) => b.total - a.total);
+            .map((x) => {
+                const promedio = +(x.total / x.partidas).toFixed(2);
+                const pct = maxEquipo > 0
+                    ? Math.min(100, Math.round((promedio / maxEquipo) * 10000) / 100)
+                    : 0;
+                return { ...x, promedio, pct };
+            })
+            .sort((a, b) => {
+                const d = b.pct - a.pct;
+                return d !== 0 ? d : b.total - a.total;
+            });
 
         const tbody = document.querySelector("#rk-duplas tbody");
         if (!tbody) return;
         tbody.innerHTML = filas.length === 0
-            ? `<tr><td colspan="6" class="text-dim text-c">
+            ? `<tr><td colspan="7" class="text-dim text-c">
                 Aún no se han registrado partidas con nombre de dupla.
                </td></tr>`
             : filas.map((f, i) => `
@@ -189,6 +235,7 @@ const ModuloRankings = (() => {
                     <td>${i + 1}</td>
                     <td>${etiquetaConIntegrantes(f.nombre, integrantesDupla[f.nombre])}</td>
                     <td><span class="chip chip--${f.base}">${f.base}</span></td>
+                    <td><strong>${f.pct}%</strong></td>
                     <td>${f.partidas}</td>
                     <td><strong>${f.total}</strong></td>
                     <td>${f.promedio}</td>

@@ -76,6 +76,7 @@ const ModuloScorer = (() => {
         renderBases();
         renderMisiones();
         actualizarCronometro();
+        actualizarFocoScorer();
 
         // Listener para recargar si cambia el equipo activo
         window.addEventListener("equipo-activo-cambio", recargaPorCambioEquipo);
@@ -187,6 +188,7 @@ const ModuloScorer = (() => {
 
         if (disponibles.length === 0) {
             ul.innerHTML = `<li class="text-dim small">Todos asignados</li>`;
+            actualizarFocoScorer();
             return;
         }
         ul.innerHTML = "";
@@ -194,6 +196,7 @@ const ModuloScorer = (() => {
             const chip = crearChipJugador(j);
             ul.appendChild(chip);
         });
+        actualizarFocoScorer();
     }
 
     function renderBases() {
@@ -216,6 +219,81 @@ const ModuloScorer = (() => {
                 }
             }
         });
+        actualizarFocoScorer();
+    }
+
+    /** Un control está “lleno” para avanzar el siguiente paso sugerido. */
+    function controlTotalmenteSatisfecho(c, prog) {
+        const v = prog.valores?.[c.codigo];
+        if (c.tipo === "contador") {
+            const n = Number(v) || 0;
+            return n >= (c.max || 0);
+        }
+        if (c.tipo === "opciones") {
+            if (v == null || v === "") return false;
+            const maxPts = Math.max(0, ...(c.opciones || []).map((o) => o.puntos || 0));
+            const op = (c.opciones || []).find((o) => String(o.valor) === String(v));
+            return !!(op && (op.puntos || 0) >= maxPts);
+        }
+        return v === true;
+    }
+
+    /** Resalta el siguiente control útil o, antes de iniciar, huecos de base / Iniciar. */
+    function actualizarFocoScorer() {
+        document.querySelectorAll(".ctrl--siguiente").forEach((el) =>
+            el.classList.remove("ctrl--siguiente"));
+        document.querySelectorAll(".mision-tarjeta--foco").forEach((el) =>
+            el.classList.remove("mision-tarjeta--foco"));
+        document.querySelectorAll(".slot-vacio--foco").forEach((el) =>
+            el.classList.remove("slot-vacio--foco"));
+        const btnIni = document.getElementById("btn-iniciar");
+        if (btnIni) btnIni.classList.remove("btn--cta-pulse");
+        document.getElementById("btn-registrar")?.classList.remove("btn--cta-pulse");
+        document.getElementById("btn-finalizar")?.classList.remove("btn--cta-pulse");
+
+        const root = document.getElementById("scorer");
+        if (!root || !state) return;
+
+        if (root.classList.contains("scorer--inactivo")) {
+            const basesOk = state.baseAzul.length === 2 && state.baseRoja.length === 2;
+            if (!basesOk) {
+                document.querySelectorAll(".slot-vacio").forEach((slot) =>
+                    slot.classList.add("slot-vacio--foco"));
+            } else if (btnIni && !btnIni.disabled) {
+                btnIni.classList.add("btn--cta-pulse");
+            }
+            return;
+        }
+
+        for (const m of state.misiones) {
+            const prog = state.progresoMisiones[m.id];
+            if (!prog || prog.fallada) continue;
+            if (misionCompletada(m, prog)) continue;
+            const controles = Array.isArray(m.bonus) ? m.bonus : [];
+            for (const c of controles) {
+                if (controlTotalmenteSatisfecho(c, prog)) continue;
+                const card = root.querySelector(`[data-mision-id="${m.id}"]`);
+                if (!card) return;
+                const ctrl = [...card.querySelectorAll(".ctrl")].find(
+                    (el) => el.dataset.codigo === c.codigo);
+                if (ctrl) {
+                    ctrl.classList.add("ctrl--siguiente");
+                    card.classList.add("mision-tarjeta--foco");
+                    ctrl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                }
+                return;
+            }
+        }
+
+        if (state.partidaEnCurso) {
+            const btnFin = document.getElementById("btn-finalizar");
+            if (btnFin && !btnFin.disabled) btnFin.classList.add("btn--cta-pulse");
+        }
+
+        if (state.partidaFinalizada && !state.partidaRegistrada) {
+            const reg = document.getElementById("btn-registrar");
+            if (reg && !reg.hidden) reg.classList.add("btn--cta-pulse");
+        }
     }
 
     /** Crea un chip arrastrable de jugador. */
@@ -362,6 +440,7 @@ const ModuloScorer = (() => {
             cont.appendChild(crearTarjetaMision(m));
         });
         actualizarScoreTotal();
+        actualizarFocoScorer();
     }
 
     /** Estado inicial de una misión: sin fallar y sin controles activos. */
@@ -498,6 +577,7 @@ const ModuloScorer = (() => {
                     prog.valores[codigo] = chk.checked;
                     aplicarEstadoMision(el, m);
                     actualizarScoreTotal();
+                    actualizarFocoScorer();
                 });
             } else if (tipo === "contador") {
                 const max    = parseInt(ctrl.dataset.max, 10) || 0;
@@ -517,6 +597,7 @@ const ModuloScorer = (() => {
                         valorEl.textContent = nuevo;
                         aplicarEstadoMision(el, m);
                         actualizarScoreTotal();
+                        actualizarFocoScorer();
                     });
                 });
             } else if (tipo === "opciones") {
@@ -532,6 +613,7 @@ const ModuloScorer = (() => {
                         prog.valores[codigo] = (prog.valores[codigo] === valor) ? null : valor;
                         aplicarEstadoMision(el, m);
                         actualizarScoreTotal();
+                        actualizarFocoScorer();
                     });
                 });
             }
@@ -549,6 +631,7 @@ const ModuloScorer = (() => {
             const nueva = crearTarjetaMision(m);
             el.replaceWith(nueva);
             actualizarScoreTotal();
+            actualizarFocoScorer();
         });
 
         const btnReset = el.querySelector('[data-accion="reset"]');
@@ -561,6 +644,7 @@ const ModuloScorer = (() => {
             const nueva = crearTarjetaMision(m);
             el.replaceWith(nueva);
             actualizarScoreTotal();
+            actualizarFocoScorer();
         });
     }
 
@@ -652,6 +736,7 @@ const ModuloScorer = (() => {
         document.getElementById("btn-finalizar").disabled = false;
         document.getElementById("btn-registrar").hidden   = true;
         document.getElementById("crono-estado").textContent = "PARTIDA EN CURSO";
+        actualizarFocoScorer();
 
         // Tick cada 200ms para suavidad visual, pero solo actualiza al segundo
         const fin = Date.now() + state.duracion * 1000;
@@ -697,6 +782,7 @@ const ModuloScorer = (() => {
         document.getElementById("btn-finalizar").disabled = true;
         document.getElementById("btn-iniciar").disabled   = true;
         document.getElementById("btn-registrar").hidden   = false;
+        actualizarFocoScorer();
         toast(`Partida finalizada (${puntajeTotal()} pts). Ajusta y pulsa Registrar`, "info");
     }
 
