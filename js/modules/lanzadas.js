@@ -94,33 +94,65 @@ const ModuloLanzadas = (() => {
         lanzadas.forEach((l) => {
             const t = Number(l.tiempo_recorrido_seg) || 0;
             if (l.base === "azul" || l.base === "roja") {
-                byBase[l.base].push({ nombre: l.nombre, t });
+                byBase[l.base].push({ id: l.id, nombre: l.nombre, t, orden: l.orden });
             }
         });
+        ["azul", "roja"].forEach((k) => byBase[k].sort((a, b) => a.orden - b.orden));
 
         function bloqueBase(titulo, key) {
             const arr = byBase[key];
             const sum = arr.reduce((s, x) => s + x.t, 0);
             const n = arr.length;
-            let transicionTxt = "—";
-            let alerta = "";
-            if (n === 1) {
-                const resto = PARTIDA_FLL_SEG - sum;
-                transicionTxt = `${resto}s orientativos fuera de ese recorrido dentro de los ${PARTIDA_FLL_SEG}s.`;
-            } else if (n > 1) {
-                const huecos = n - 1;
-                const porHueco = (PARTIDA_FLL_SEG - sum) / huecos;
-                transicionTxt =
-                    `~${porHueco.toFixed(1)}s promedio por hueco entre lanzadas (${huecos} transición(es); partida ${PARTIDA_FLL_SEG}s).`;
+            const restante = PARTIDA_FLL_SEG - sum;
+
+            if (n === 0) {
+                return `<div class="lanzadas-resumen__col lanzadas-resumen__col--${key}">
+                    <h4>${titulo}</h4>
+                    <p class="text-dim small" style="margin:0;">Sin lanzadas asignadas a esta base.</p>
+                </div>`;
             }
-            if (n > 0 && (PARTIDA_FLL_SEG - sum) < 0) {
-                alerta = `<p class="lanzadas-resumen__alerta">La suma de recorridos (${sum}s) supera ${PARTIDA_FLL_SEG}s — ajusta tiempos.</p>`;
-            }
+
+            const huecos = Math.max(0, n - 1);
+            const porHueco = huecos > 0 ? restante / huecos : restante;
+            const sobra = restante < 0;
+
+            const items = arr.map((x, i) => {
+                const esUltima = i === n - 1;
+                const transTxt = !esUltima
+                    ? (sobra
+                        ? `<span class="lan-trans lan-trans--bad">⚠ excede ${PARTIDA_FLL_SEG}s</span>`
+                        : `<span class="lan-trans">↳ cambio: <strong>${porHueco.toFixed(1)}s</strong></span>`)
+                    : (sobra
+                        ? `<span class="lan-trans lan-trans--bad">⚠ excede ${PARTIDA_FLL_SEG}s</span>`
+                        : `<span class="lan-trans lan-trans--ok">✓ margen final: <strong>${restante.toFixed(0)}s</strong></span>`);
+                return `<li>
+                    <span class="lan-num">${i + 1}</span>
+                    <span class="lan-nombre">${escapeHtml(x.nombre)}</span>
+                    <span class="lan-t">⏱ ${x.t}s</span>
+                    ${transTxt}
+                </li>`;
+            }).join("");
+
+            const cabezera = sobra
+                ? `<p class="lanzadas-resumen__alerta">
+                    La suma de recorridos (<strong>${sum}s</strong>) supera <strong>${PARTIDA_FLL_SEG}s</strong>.
+                    Te quedan <strong>${Math.abs(restante)}s</strong> de exceso — ajusta tiempos.
+                </p>`
+                : (huecos > 0
+                    ? `<p class="text-dim small" style="margin:0 0 .5rem;">
+                        <strong>${sum}s</strong> de recorridos · <strong>${restante}s</strong>
+                        para repartir en <strong>${huecos}</strong> cambio(s) de mecanismo
+                        ≈ <strong>${porHueco.toFixed(1)}s</strong> por cambio.
+                    </p>`
+                    : `<p class="text-dim small" style="margin:0 0 .5rem;">
+                        <strong>${sum}s</strong> de recorrido · <strong>${restante}s</strong> de margen
+                        dentro de los ${PARTIDA_FLL_SEG}s.
+                    </p>`);
+
             return `<div class="lanzadas-resumen__col lanzadas-resumen__col--${key}">
-                <h4>${titulo}</h4>
-                <p><strong>${sum}s</strong> en ${n} lanzada(s)</p>
-                <p class="text-dim small">${transicionTxt}</p>
-                ${alerta}
+                <h4>${titulo} · <span class="text-dim">${n} lanzada(s)</span></h4>
+                ${cabezera}
+                <ol class="lan-secuencia">${items}</ol>
             </div>`;
         }
 
@@ -128,19 +160,19 @@ const ModuloLanzadas = (() => {
             (s, l) => s + (Number(l.tiempo_recorrido_seg) || 0), 0);
 
         el.innerHTML = `
-            <h3 style="margin-top:0;">Tiempos por base y transiciones</h3>
+            <h3 style="margin-top:0;">⏱ Tiempos por base y cambios de mecanismo</h3>
             <p class="text-dim small">
                 Suma los tiempos de recorrido planificados por base y reparte el tiempo
-                restante hasta ${PARTIDA_FLL_SEG}s entre los huecos entre lanzadas (cambios de mecanismo).
-                En competición ambas bases comparten la misma ventana de ${PARTIDA_FLL_SEG}s.
+                restante hasta los <strong>${PARTIDA_FLL_SEG}s</strong> de la partida entre los cambios de mecanismo
+                que hay entre una lanzada y la siguiente. En competición ambas bases comparten la misma ventana.
             </p>
             <div class="lanzadas-resumen__grid">
-                ${bloqueBase("Base azul", "azul")}
-                ${bloqueBase("Base roja", "roja")}
+                ${bloqueBase("🟦 Base azul", "azul")}
+                ${bloqueBase("🟥 Base roja", "roja")}
             </div>
             <p class="text-dim small" style="margin-bottom:0;">
-                Suma de <em>todos</em> los recorridos: <strong>${sumTotal}s</strong>
-                (referencia; en mesa real los recorridos de ambas bases son en paralelo).
+                Suma de <em>todos</em> los recorridos (azul + roja):
+                <strong>${sumTotal}s</strong> (referencia; ambas bases corren en paralelo).
             </p>`;
     }
 

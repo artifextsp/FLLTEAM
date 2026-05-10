@@ -193,6 +193,15 @@
 
 .config-partida .form-field { margin: 0; }
 
+.config-partida input {
+    border-width: 2px;
+    background: var(--c-bg);
+    transition: border-color 0.12s ease, box-shadow 0.12s ease;
+}
+.config-partida input:focus {
+    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.25);
+}
+
 /* ---------- GRILLA DE MISIONES ---------- */
 .misiones-grid {
     display: grid;
@@ -259,19 +268,25 @@
 
 /* ---------- Barra de progreso ---------- */
 .mision-progress {
-    height: 6px;
-    background: var(--c-bg-3);
+    height: 8px;
+    background: var(--c-bg);
+    border: 1px solid var(--c-bg-3);
     border-radius: 999px;
     overflow: hidden;
 }
 .mision-progress__bar {
     height: 100%;
     width: 0;
-    background: var(--c-primary);
-    transition: width 0.15s ease, background 0.15s ease;
+    background: linear-gradient(90deg, var(--c-primary), #60a5fa);
+    transition: width 0.2s ease, background 0.15s ease;
 }
-.mision-tarjeta.completada .mision-progress__bar { background: var(--c-success); }
-.mision-tarjeta.fallada    .mision-progress__bar { background: var(--c-danger);  width: 100% !important; opacity: 0.35; }
+.mision-tarjeta.completada .mision-progress__bar {
+    background: linear-gradient(90deg, var(--c-success), #4ade80);
+}
+.mision-tarjeta.fallada    .mision-progress__bar {
+    background: linear-gradient(90deg, var(--c-danger), #f87171);
+    width: 100% !important; opacity: 0.45;
+}
 
 .mision-tarjeta.parcial {
     border-color: var(--c-primary);
@@ -281,100 +296,133 @@
 .mision-controles {
     display: flex;
     flex-direction: column;
-    gap: 0.4rem;
+    gap: 0.45rem;
 }
 
 .ctrl {
     display: flex;
     flex-direction: column;
-    gap: 0.3rem;
-    background: var(--c-bg-1);
-    border: 1px solid var(--c-bg-3);
+    gap: 0.35rem;
+    background: rgba(15, 23, 42, 0.7);
+    border: 1.5px solid var(--c-bg-3);
     border-radius: var(--radius);
-    padding: 0.45rem 0.55rem;
+    padding: 0.55rem 0.65rem;
+    transition: border-color 0.12s ease, background 0.12s ease,
+                box-shadow 0.12s ease, transform 0.05s ease;
+}
+
+.ctrl:hover {
+    border-color: rgba(96, 165, 250, 0.55);
+    background: rgba(15, 23, 42, 0.95);
 }
 
 .ctrl-nombre {
-    font-size: 0.85rem;
+    font-size: 0.9rem;
+    font-weight: 600;
     display: flex;
     justify-content: space-between;
     gap: 0.5rem;
     align-items: baseline;
 }
-.ctrl-nombre .small { font-weight: 500; }
+.ctrl-nombre .small { font-weight: 500; color: var(--c-text-dim); }
 
+.ctrl--si-no {
+    cursor: pointer;
+}
 .ctrl--si-no .ctrl-toggle {
     display: flex;
     align-items: center;
     gap: 0.55rem;
     cursor: pointer;
     user-select: none;
+    margin: 0;
 }
 .ctrl--si-no input[type="checkbox"] {
-    width: 22px;
-    height: 22px;
+    width: 26px;
+    height: 26px;
     accent-color: var(--c-primary);
     cursor: pointer;
     flex-shrink: 0;
 }
 .ctrl--si-no:has(input:checked) {
-    background: rgba(99, 102, 241, 0.12);
-    border-color: var(--c-primary);
+    background: rgba(34, 197, 94, 0.18);
+    border-color: var(--c-success);
+    box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.35);
 }
+.ctrl--si-no:has(input:checked) .ctrl-nombre { color: #d1fae5; }
 
 .ctrl-contador {
     display: flex;
     align-items: center;
     gap: 0.5rem;
     justify-content: center;
+    background: rgba(59, 130, 246, 0.06);
+    border-radius: var(--radius);
+    padding: 0.3rem;
 }
 .ctrl-contador .btn.btn--icon {
-    width: 36px;
-    height: 36px;
-    min-height: 36px;
-    font-size: 1.15rem;
+    width: 42px;
+    height: 42px;
+    min-height: 42px;
+    font-size: 1.4rem;
+    font-weight: 800;
     padding: 0;
     display: flex;
     align-items: center;
     justify-content: center;
-    border: 2px solid var(--c-bg-3);
+    border: 2px solid var(--c-primary);
+    background: var(--c-primary);
+    color: #fff;
+}
+.ctrl-contador .btn.btn--icon:hover:not(:disabled) {
+    background: var(--c-primary-2);
+    border-color: var(--c-primary-2);
+    transform: scale(1.05);
 }
 .ctrl-valor {
-    font-size: 1.1rem;
-    font-weight: 700;
-    min-width: 22px;
+    font-size: 1.4rem;
+    font-weight: 800;
+    min-width: 28px;
     text-align: center;
-    color: var(--c-primary);
+    color: #fff;
+    background: var(--c-bg);
+    border: 1px solid var(--c-bg-3);
+    border-radius: var(--radius);
+    padding: 0.1rem 0.5rem;
 }
 
 .ctrl-opciones {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.3rem;
+    gap: 0.35rem;
 }
 .pill {
-    border: 2px solid var(--c-bg-3);
-    background: transparent;
+    border: 2px solid var(--c-primary);
+    background: rgba(59, 130, 246, 0.08);
     color: var(--c-text);
-    padding: 0.25rem 0.55rem;
+    padding: 0.35rem 0.7rem;
     border-radius: 999px;
-    font-size: 0.8rem;
+    font-size: 0.85rem;
+    font-weight: 600;
     cursor: pointer;
     user-select: none;
     display: inline-flex;
     flex-direction: column;
     align-items: center;
     line-height: 1.1;
-    min-height: 36px;
+    min-height: 42px;
     justify-content: center;
+    transition: background 0.12s ease, transform 0.05s ease;
 }
-.pill .small { font-size: 0.68rem; }
+.pill .small { font-size: 0.72rem; color: var(--c-text-dim); font-weight: 500; }
+.pill:hover { background: rgba(59, 130, 246, 0.2); transform: scale(1.03); }
 .pill.activo {
-    background: var(--c-primary);
-    border-color: var(--c-primary);
+    background: var(--c-success);
+    border-color: var(--c-success);
     color: #fff;
+    box-shadow: 0 0 0 2px rgba(34, 197, 94, 0.35);
 }
-.pill.activo .small { color: rgba(255,255,255,0.85); }
+.pill.activo .small { color: rgba(255,255,255,0.92); }
 
 .mision-actions {
     display: flex;
@@ -390,66 +438,135 @@
 }
 
 /* Scorer deshabilitado (antes de iniciar partida) */
-.scorer--inactivo .misiones-grid { opacity: 0.55; pointer-events: none; }
+.scorer--inactivo .misiones-grid {
+    opacity: 0.7;
+    pointer-events: none;
+    filter: saturate(0.6);
+}
 
 /* ---------- CTA: siguiente control / iniciar ---------- */
 .btn--cta-pulse {
     box-shadow:
-        0 0 0 2px rgba(59, 130, 246, 0.9),
-        0 0 24px rgba(59, 130, 246, 0.45);
-    animation: cta-pulse 1.4s ease-in-out infinite alternate;
-}
-
-@keyframes cta-pulse {
-    from { box-shadow: 0 0 0 2px rgba(59, 130, 246, 0.5), 0 0 12px rgba(59, 130, 246, 0.25); }
-    to   { box-shadow: 0 0 0 3px rgba(96, 165, 250, 0.95), 0 0 28px rgba(59, 130, 246, 0.5); }
-}
-
-.mision-tarjeta--foco {
-    border-color: rgba(96, 165, 250, 0.85) !important;
-    box-shadow: 0 0 0 1px rgba(59, 130, 246, 0.35), 0 8px 28px rgba(0, 0, 0, 0.35);
-}
-
-.ctrl--siguiente {
-    border-color: rgba(52, 211, 153, 0.9) !important;
-    background: rgba(52, 211, 153, 0.12) !important;
-    box-shadow:
-        inset 0 0 0 1px rgba(52, 211, 153, 0.4),
-        0 0 0 2px rgba(52, 211, 153, 0.35);
+        0 0 0 3px rgba(34, 197, 94, 0.95),
+        0 0 28px rgba(34, 197, 94, 0.55);
+    animation: cta-pulse 1.2s ease-in-out infinite alternate;
     position: relative;
 }
 
-.ctrl--siguiente::before {
-    content: "Siguiente";
+@keyframes cta-pulse {
+    from { box-shadow: 0 0 0 3px rgba(34, 197, 94, 0.55), 0 0 14px rgba(34, 197, 94, 0.3); }
+    to   { box-shadow: 0 0 0 5px rgba(34, 197, 94, 0.95), 0 0 32px rgba(34, 197, 94, 0.6); }
+}
+
+.mision-tarjeta--foco {
+    border-color: var(--c-warning) !important;
+    border-width: 2px !important;
+    background: rgba(245, 158, 11, 0.06) !important;
+    box-shadow:
+        0 0 0 2px rgba(245, 158, 11, 0.4),
+        0 8px 28px rgba(245, 158, 11, 0.25);
+    transform: translateY(-1px);
+    position: relative;
+}
+
+.mision-tarjeta--foco::before {
+    content: "🎯 Misión activa";
     position: absolute;
-    top: -0.65rem;
-    right: 0.4rem;
-    font-size: 0.62rem;
+    top: -0.7rem;
+    left: 0.6rem;
+    font-size: 0.66rem;
     font-weight: 800;
     text-transform: uppercase;
     letter-spacing: 0.06em;
-    color: #34d399;
-    background: var(--c-bg-2);
-    padding: 2px 6px;
-    border-radius: 4px;
-    border: 1px solid rgba(52, 211, 153, 0.5);
+    color: #fff;
+    background: var(--c-warning);
+    padding: 2px 8px;
+    border-radius: 999px;
+    z-index: 1;
+}
+
+.mision-tarjeta--proxima {
+    border-color: rgba(96, 165, 250, 0.7) !important;
+    border-style: dashed !important;
+    border-width: 2px !important;
+    background: rgba(59, 130, 246, 0.06) !important;
+    position: relative;
+}
+
+.mision-tarjeta--proxima::before {
+    content: "↓ Siguiente misión";
+    position: absolute;
+    top: -0.7rem;
+    left: 0.6rem;
+    font-size: 0.62rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #93c5fd;
+    background: var(--c-bg);
+    padding: 2px 7px;
+    border-radius: 999px;
+    border: 1px dashed rgba(96, 165, 250, 0.7);
+}
+
+.ctrl--siguiente {
+    border-color: var(--c-success) !important;
+    background: rgba(34, 197, 94, 0.18) !important;
+    box-shadow:
+        inset 0 0 0 1px rgba(34, 197, 94, 0.45),
+        0 0 0 3px rgba(34, 197, 94, 0.45);
+    position: relative;
+    animation: pulso-siguiente 1.8s ease-in-out infinite;
+}
+
+@keyframes pulso-siguiente {
+    0%, 100% { box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.45), 0 0 0 2px rgba(34, 197, 94, 0.35); }
+    50%      { box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.7),  0 0 0 5px rgba(34, 197, 94, 0.6); }
+}
+
+.ctrl--siguiente::before {
+    content: "👉 Toca aquí";
+    position: absolute;
+    top: -0.75rem;
+    right: 0.4rem;
+    font-size: 0.66rem;
+    font-weight: 800;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: #fff;
+    background: var(--c-success);
+    padding: 3px 8px;
+    border-radius: 999px;
     pointer-events: none;
+    box-shadow: 0 2px 8px rgba(34, 197, 94, 0.4);
 }
 
 .slot-vacio--foco {
-    border-color: rgba(251, 191, 36, 0.85) !important;
-    background: rgba(251, 191, 36, 0.12) !important;
+    border-color: var(--c-warning) !important;
+    background: rgba(251, 191, 36, 0.18) !important;
     color: #fde68a !important;
-    box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25);
+    box-shadow: 0 0 0 3px rgba(251, 191, 36, 0.4);
+    animation: pulso-slot 1.6s ease-in-out infinite alternate;
 }
 
-.pill:not(.activo):hover {
-    border-color: var(--c-primary);
-    background: rgba(59, 130, 246, 0.12);
+@keyframes pulso-slot {
+    from { box-shadow: 0 0 0 2px rgba(251, 191, 36, 0.25); }
+    to   { box-shadow: 0 0 0 4px rgba(251, 191, 36, 0.6); }
 }
 
 .ctrl--siguiente.ctrl--si-no .ctrl-toggle {
-    outline: 2px solid rgba(52, 211, 153, 0.6);
+    outline: 2px solid rgba(34, 197, 94, 0.6);
     outline-offset: 2px;
     border-radius: var(--radius);
+}
+
+.ctrl--siguiente .ctrl-contador .btn.btn--icon {
+    background: var(--c-success);
+    border-color: var(--c-success);
+    box-shadow: 0 0 12px rgba(34, 197, 94, 0.5);
+}
+
+.ctrl--siguiente .pill:not(.activo) {
+    border-color: var(--c-success);
+    background: rgba(34, 197, 94, 0.18);
 }

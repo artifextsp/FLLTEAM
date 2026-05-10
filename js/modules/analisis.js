@@ -16,18 +16,31 @@ const ModuloAnalisis = (() => {
         cont.innerHTML = `
             <div class="page-header"><h2>Análisis</h2></div>
 
+            <div class="card alertas-card" id="card-alertas">
+                <div class="alertas-card__head">
+                    <h3>🔔 Campana de alertas</h3>
+                    <span class="alertas-card__resumen" id="alertas-resumen"></span>
+                </div>
+                <p class="text-dim small">
+                    Avisos automáticos: <strong>ajuste</strong> (3+ fallos seguidos),
+                    <strong>inconsistencia</strong> (puntaje variable) y
+                    <strong>estabilidad</strong> (5+ aciertos seguidos).
+                </p>
+                <div class="alertas-stack" id="lista-alertas"></div>
+            </div>
+
             <div class="card">
                 <h3>🚀 Efectividad por lanzada (recorrido)</h3>
                 <p class="text-dim small">
-                    Orden: de menor a mayor efectividad. Incluye puntos máximos de la lanzada
-                    y el tiempo planificado del recorrido (segundos).
+                    Orden: de <strong>menor</strong> a <strong>mayor</strong> efectividad.
+                    Incluye los puntos máximos teóricos de la lanzada y el tiempo planificado del recorrido (segundos).
                 </p>
                 <div class="tabla-wrap">
                     <table class="tabla tabla--compact" id="tbl-lanzadas">
                         <thead>
                             <tr>
                                 <th>Lanzada</th>
-                                <th title="Suma de puntos máximos de las misiones de esta lanzada">Pts lanzada</th>
+                                <th title="Suma de puntos máximos de las misiones de esta lanzada">Pts máx</th>
                                 <th>Base</th>
                                 <th>Tiempo</th>
                                 <th>Posición</th>
@@ -48,12 +61,17 @@ const ModuloAnalisis = (() => {
 
             <div class="card">
                 <h3>🧩 Efectividad por misión</h3>
-                <p class="text-dim small">Orden: de menor a mayor efectividad (%).</p>
+                <p class="text-dim small">
+                    Orden: de <strong>menor</strong> a <strong>mayor</strong> efectividad (%).
+                    La columna <em>Pts máx</em> indica los puntos teóricos que aporta cada misión —
+                    úsala como referencia para priorizar.
+                </p>
                 <div class="tabla-wrap">
                     <table class="tabla tabla--compact" id="tbl-efectividad">
                         <thead>
                             <tr>
                                 <th>Cód.</th><th>Misión</th>
+                                <th title="Puntos máximos teóricos que da la misión">Pts máx</th>
                                 <th>Intentos</th><th>Completadas</th><th>Falladas</th>
                                 <th>Efectividad</th>
                             </tr>
@@ -72,14 +90,6 @@ const ModuloAnalisis = (() => {
                 <div class="chart-wrap">
                     <canvas id="grafico-tendencia"></canvas>
                 </div>
-            </div>
-
-            <div class="card" id="card-alertas">
-                <h3>Campana de alertas</h3>
-                <p class="text-dim small">
-                    Revisa estas señales tras varias lanzadas seguidas: ajustes, inconsistencia o estabilidad.
-                </p>
-                <div class="alertas-stack" id="lista-alertas"></div>
             </div>`;
 
         await cargar(equipoId);
@@ -100,6 +110,7 @@ const ModuloAnalisis = (() => {
 
         pintarEfectividadLanzadas(efecLanzadas, lanzadas, misiones);
         pintarEfectividad(efec, misiones);
+        pintarSistemaAlertas(efec, tend, misiones, equipoId);
 
         const sel = document.getElementById("sel-mision");
         sel.innerHTML = misiones
@@ -107,11 +118,9 @@ const ModuloAnalisis = (() => {
             .join("");
         sel.addEventListener("change", () => pintarTendencia(sel.value, tend));
         if (misiones.length) pintarTendencia(misiones[0].id, tend);
-
-        pintarSistemaAlertas(efec, tend, misiones, equipoId);
     }
 
-    function puntarEfectividadLanzadas(efec, lanzadas, misiones) {
+    function pintarEfectividadLanzadas(efec, lanzadas, misiones) {
         const misById = Object.fromEntries(misiones.map((m) => [m.id, m]));
         const enlacesPorLan = {};
         lanzadas.forEach((l) => {
@@ -185,18 +194,29 @@ const ModuloAnalisis = (() => {
             const ok       = e.veces_completada || 0;
             const fail     = e.veces_fallada || 0;
             const pct      = Number(e.efectividad_pct || 0);
-            return { m, intentos, ok, fail, pct };
-        }).sort((a, b) => a.pct - b.pct);
+            return { m, intentos, ok, fail, pct, pmax: maxMision(m) };
+        }).sort((a, b) => {
+            if (a.intentos === 0 && b.intentos > 0) return 1;
+            if (b.intentos === 0 && a.intentos > 0) return -1;
+            return a.pct - b.pct;
+        });
 
-        tbody.innerHTML = filas.map(({ m, intentos, ok, fail, pct }) => {
-            const clase    = pct < 50 ? "text-dim" : "";
+        tbody.innerHTML = filas.map(({ m, intentos, ok, fail, pct, pmax }) => {
+            const clase    = pct < 50 ? "fila--alerta" : "";
+            const badgeEf  = pct < 50 ? "badge--malo"
+                          : pct < 75 ? "badge--medio"
+                                     : "badge--bueno";
+            const efTxt = intentos === 0
+                ? `<span class="text-dim small">Sin datos</span>`
+                : `<span class="badge ${badgeEf}">${pct}%</span>`;
             return `<tr class="${clase}">
                 <td><code>${escapeHtml(m.codigo)}</code></td>
                 <td>${escapeHtml(m.nombre_es)}</td>
+                <td><strong>${pmax}</strong> pt</td>
                 <td>${intentos}</td>
                 <td>${ok}</td>
                 <td>${fail}</td>
-                <td><strong>${pct}%</strong></td>
+                <td>${efTxt}</td>
             </tr>`;
         }).join("");
     }
@@ -385,7 +405,38 @@ const ModuloAnalisis = (() => {
         });
 
         const cont = document.getElementById("lista-alertas");
+        const resumen = document.getElementById("alertas-resumen");
         if (!cont) return;
+
+        // Orden: negativas primero, luego warn, luego positivas
+        const peso = { "alerta-ficha--neg": 0, "alerta-ficha--warn": 1, "alerta-ficha--pos": 2 };
+        items.sort((a, b) => (peso[a.clase] ?? 9) - (peso[b.clase] ?? 9));
+
+        const counts = { neg: 0, warn: 0, pos: 0 };
+        items.forEach((it) => {
+            if (it.clase === "alerta-ficha--neg") counts.neg += 1;
+            else if (it.clase === "alerta-ficha--warn") counts.warn += 1;
+            else if (it.clase === "alerta-ficha--pos") counts.pos += 1;
+        });
+
+        if (resumen) {
+            if (items.length === 0) {
+                resumen.innerHTML = `<span class="alerta-pill alerta-pill--neutro">Sin alertas</span>`;
+            } else {
+                const partes = [];
+                if (counts.neg)  partes.push(`<span class="alerta-pill alerta-pill--neg">${counts.neg} ajuste${counts.neg !== 1 ? "s" : ""}</span>`);
+                if (counts.warn) partes.push(`<span class="alerta-pill alerta-pill--warn">${counts.warn} aviso${counts.warn !== 1 ? "s" : ""}</span>`);
+                if (counts.pos)  partes.push(`<span class="alerta-pill alerta-pill--pos">${counts.pos} estable${counts.pos !== 1 ? "s" : ""}</span>`);
+                resumen.innerHTML = partes.join(" ");
+            }
+        }
+
+        const cardAlertas = document.getElementById("card-alertas");
+        if (cardAlertas) {
+            cardAlertas.classList.toggle("alertas-card--has-neg", counts.neg > 0);
+            cardAlertas.classList.toggle("alertas-card--has-warn", counts.warn > 0 && counts.neg === 0);
+            cardAlertas.classList.toggle("alertas-card--has-pos", counts.pos > 0 && counts.warn === 0 && counts.neg === 0);
+        }
 
         if (items.length === 0) {
             cont.innerHTML = `<div class="alerta-ficha alerta-ficha--neutro">
@@ -395,13 +446,21 @@ const ModuloAnalisis = (() => {
             return;
         }
 
-        const ver = `<a href="#" class="link-ver-mision" data-equipo="${escapeHtml(equipoId)}">Ver en tendencia ↓</a>`;
+        const verLink = `<a href="#" class="link-ver-mision" data-equipo="${escapeHtml(equipoId)}">Ver en tendencia ↓</a>`;
+        const ICON = {
+            "alerta-ficha--neg":  "⚠️",
+            "alerta-ficha--warn": "🔄",
+            "alerta-ficha--pos":  "✅",
+        };
 
         cont.innerHTML = items.map((it) => `
             <div class="alerta-ficha ${it.clase}" data-mision-alert="${it.misionId}">
-                <div class="alerta-ficha__tit">${escapeHtml(it.titulo)}</div>
+                <div class="alerta-ficha__tit">
+                    <span class="alerta-ficha__ico">${ICON[it.clase] || "•"}</span>
+                    ${escapeHtml(it.titulo)}
+                </div>
                 <div class="alerta-ficha__txt">${escapeHtml(it.texto)}</div>
-                <div class="alerta-ficha__acc">${ver}</div>
+                <div class="alerta-ficha__acc">${verLink}</div>
             </div>
         `).join("");
 

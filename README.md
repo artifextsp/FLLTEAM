@@ -39,9 +39,12 @@ FLLTEAM/
 │   ├── api/                  # Capa de datos (1 archivo por tabla)
 │   └── modules/              # scorer, equipos, jugadores, misiones, rankings, analisis
 └── sql/
-    ├── 01_schema.sql         # Tablas + índices + RLS + vistas + realtime
-    ├── 02_seed_unearthed.sql # Misiones UNEARTHED 2025-2026
-    └── 05_admin_auth.sql     # Admin: usuarios y reset de contraseña
+    ├── 01_schema.sql                    # Tablas + índices + RLS + vistas + realtime
+    ├── 02_seed_unearthed.sql            # Misiones UNEARTHED 2025-2026
+    ├── 03_lanzadas.sql                  # Lanzadas (recorridos) y vista efectividad
+    ├── 04_lanzadas_tiempo_recorrido.sql # Tiempo por recorrido
+    ├── 05_admin_auth.sql                # Admin: usuarios y reset de contraseña
+    └── 06_admin_purgas.sql              # Admin: purgar ranking / efectividad
 ```
 
 ---
@@ -66,7 +69,9 @@ FLLTEAM/
 1. Panel Supabase → **SQL Editor** → **New query**.
 2. Pega el contenido de `sql/01_schema.sql` → **Run**. Verás que se crean todas las tablas, vistas, índices y políticas RLS.
 3. Pega el contenido de `sql/02_seed_unearthed.sql` → **Run**. Se insertan las misiones de la temporada. Puedes editar nombres, puntos y bonus aquí sin tocar el frontend.
-4. Pega el contenido de `sql/05_admin_auth.sql` → **Run**. Se crea el módulo de administración de usuarios.
+4. Pega el contenido de `sql/03_lanzadas.sql`, luego `sql/04_lanzadas_tiempo_recorrido.sql` → **Run** (cada uno).
+5. Pega el contenido de `sql/05_admin_auth.sql` → **Run**. Se crea el módulo de administración de usuarios.
+6. Pega el contenido de `sql/06_admin_purgas.sql` → **Run**. Habilita los botones de **purga** del panel Admin (borrar lanzamientos / efectividad por equipo).
 
 > 💡 **Verificar misiones**: los nombres y puntajes del seed se basan en información pública de la temporada y pueden requerir ajustes. Revisa contra el rulebook oficial y edita la tabla `misiones` con un `UPDATE` o desde **Table Editor**.
 

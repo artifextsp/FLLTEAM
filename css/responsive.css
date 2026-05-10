@@ -1,30 +1,77 @@
 /* ===================================================================
-   Media queries - mobile-first
+   Media queries — mobile-first
+   ===================================================================
+   Estrategia:
+     - Por defecto el diseño se renderiza en una sola columna apta para
+       móvil (≤ 480 px en vertical).
+     - A partir de 480 px se introducen mejoras tipográficas y se
+       aprovecha el ancho extra para 2 columnas en bases / análisis.
+     - A partir de 720 px (tableta) el scorer pasa a layout cronómetro
+       + jugadores en grid de dos columnas.
+     - A partir de 1024 px (portátil) la barra de navegación se mueve a
+       la izquierda y se libera la franja inferior.
    =================================================================== */
 
-/* --- Tablet (≥ 720px) --- */
-@media (min-width: 720px) {
-    .app-header h1 { font-size: 1.3rem; }
-    .app-main      { padding: 1.5rem; }
+/* --- Móvil pequeño (≤ 480px) — base mobile-first --- */
+@media (max-width: 480px) {
+    body { font-size: 15px; }
 
-    .bases {
-        grid-template-columns: 1fr 1fr;
-        gap: 1rem;
+    .app-header {
+        padding: 0.5rem 0.6rem;
+        gap: 0.4rem;
+    }
+    .app-header h1 { font-size: 1rem; }
+
+    .cronometro {
+        padding: 0.8rem;
+    }
+    .cronometro .tiempo { font-size: clamp(3rem, 16vw, 5rem); }
+    .cronometro .score  { font-size: 1.6rem; }
+    .cronometro-acciones .btn { font-size: 0.9rem; padding: 0.55rem 0.6rem; }
+    .cronometro-acciones .btn--big {
+        font-size: 1rem;
+        padding: 0.7rem 1rem;
+        min-height: 50px;
     }
 
-    .scorer-top {
-        display: grid;
-        grid-template-columns: 1fr 320px;
-        gap: 1rem;
-        align-items: start;
-        min-width: 0;
+    .page-header h2 { font-size: 1.15rem; }
+
+    .ctrl-contador .btn.btn--icon {
+        width: 46px;
+        height: 46px;
+        min-height: 46px;
+    }
+
+    .mision-tarjeta { padding: 0.7rem; }
+    .mision-head .titulo { font-size: 0.95rem; }
+
+    .modal { padding: 1rem; max-height: 92vh; }
+    .modal-actions { flex-direction: column-reverse; gap: 0.5rem; }
+    .modal-actions .btn { width: 100%; }
+
+    .lanzada-head { gap: 0.5rem; }
+    .lanzada-meta { width: 100%; justify-content: flex-end; }
+
+    .config-partida {
+        grid-template-columns: 1fr;
+        padding: 0.6rem;
     }
 }
 
+/* --- Móvil hasta 719px --- */
 @media (max-width: 719px) {
     .app-nav {
         grid-template-columns: repeat(4, minmax(0, 1fr));
+        grid-auto-rows: 56px;
     }
+
+    .app-nav a {
+        font-size: 0.65rem;
+        padding: 0.35rem 0.15rem;
+        min-height: 56px;
+    }
+
+    .app-nav a .icon { font-size: 1.1rem; }
 
     .app-header {
         flex-wrap: wrap;
@@ -38,8 +85,8 @@
     }
 
     .app-main {
-        padding: 0.75rem;
-        padding-bottom: max(0.75rem, env(safe-area-inset-bottom, 0px));
+        padding: 0.7rem;
+        padding-bottom: max(0.7rem, env(safe-area-inset-bottom, 0px));
     }
 
     .page-header .acciones {
@@ -63,6 +110,55 @@
 
     .bases {
         grid-template-columns: minmax(0, 1fr);
+    }
+
+    /* Tablas: forzar fuente más pequeña pero scroll horizontal cómodo */
+    .tabla-wrap { margin: 0 -0.4rem; padding: 0 0.4rem; }
+    .tabla, .tabla--compact { font-size: 0.82rem; }
+    .tabla th, .tabla td { padding: 0.4rem 0.45rem; }
+    .tabla--compact th, .tabla--compact td { padding: 0.32rem 0.4rem; }
+
+    /* Card: padding más compacto */
+    .card { padding: 0.8rem; }
+    .card h2, .card h3 { font-size: 1rem; }
+
+    /* Lanzadas: chips de misión más pequeños */
+    .mision-chip { font-size: 0.82rem; padding: 0.45rem 0.55rem; }
+
+    /* Item-list (admin/equipos/jugadores): vertical en móvil */
+    .item-list li { flex-direction: column; align-items: stretch; gap: 0.5rem; }
+    .item-list li .acciones {
+        margin-left: 0;
+        flex-wrap: wrap;
+        width: 100%;
+    }
+    .item-list li .acciones .btn {
+        flex: 1 1 auto;
+    }
+
+    .purga-botones { flex-direction: column; align-items: stretch; }
+    .purga-botones .btn { width: 100%; }
+
+    /* Alertas: padding cómodo en móvil */
+    .alertas-card__head { flex-direction: column; align-items: flex-start; gap: 0.4rem; }
+}
+
+/* --- Tablet (≥ 720px) --- */
+@media (min-width: 720px) {
+    .app-header h1 { font-size: 1.3rem; }
+    .app-main      { padding: 1.5rem; }
+
+    .bases {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .scorer-top {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 1rem;
+        align-items: start;
+        min-width: 0;
     }
 }
 

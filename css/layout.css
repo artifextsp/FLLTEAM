@@ -14,6 +14,7 @@
     align-items: center;
     gap: 1rem;
     padding: 0.6rem 1rem;
+    padding-top: max(0.6rem, env(safe-area-inset-top, 0px));
     background: var(--c-bg-2);
     border-bottom: 1px solid var(--c-bg-3);
     position: sticky;
@@ -70,7 +71,10 @@
     text-align: center;
     border-top: 3px solid transparent;
     min-height: 58px;
+    position: relative;
 }
+
+.app-nav a:hover { color: var(--c-text); text-decoration: none; }
 
 .app-nav a .icon {
     font-size: 1.3rem;

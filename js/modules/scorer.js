@@ -242,8 +242,10 @@ const ModuloScorer = (() => {
     function actualizarFocoScorer() {
         document.querySelectorAll(".ctrl--siguiente").forEach((el) =>
             el.classList.remove("ctrl--siguiente"));
-        document.querySelectorAll(".mision-tarjeta--foco").forEach((el) =>
-            el.classList.remove("mision-tarjeta--foco"));
+        document.querySelectorAll(".mision-tarjeta--foco, .mision-tarjeta--proxima").forEach((el) => {
+            el.classList.remove("mision-tarjeta--foco");
+            el.classList.remove("mision-tarjeta--proxima");
+        });
         document.querySelectorAll(".slot-vacio--foco").forEach((el) =>
             el.classList.remove("slot-vacio--foco"));
         const btnIni = document.getElementById("btn-iniciar");
@@ -265,23 +267,43 @@ const ModuloScorer = (() => {
             return;
         }
 
-        for (const m of state.misiones) {
+        let misionFocoIdx = -1;
+        for (let i = 0; i < state.misiones.length; i++) {
+            const m = state.misiones[i];
             const prog = state.progresoMisiones[m.id];
             if (!prog || prog.fallada) continue;
             if (misionCompletada(m, prog)) continue;
             const controles = Array.isArray(m.bonus) ? m.bonus : [];
+            let pintada = false;
             for (const c of controles) {
                 if (controlTotalmenteSatisfecho(c, prog)) continue;
                 const card = root.querySelector(`[data-mision-id="${m.id}"]`);
-                if (!card) return;
+                if (!card) break;
                 const ctrl = [...card.querySelectorAll(".ctrl")].find(
                     (el) => el.dataset.codigo === c.codigo);
                 if (ctrl) {
                     ctrl.classList.add("ctrl--siguiente");
                     card.classList.add("mision-tarjeta--foco");
+                    misionFocoIdx = i;
                     ctrl.scrollIntoView({ block: "nearest", behavior: "smooth" });
+                    pintada = true;
                 }
-                return;
+                break;
+            }
+            if (pintada) break;
+        }
+
+        // Resaltar la SIGUIENTE misión pendiente para guiar al coach
+        // (cuadro tenue verde) cuando se complete la actual.
+        if (misionFocoIdx >= 0) {
+            for (let j = misionFocoIdx + 1; j < state.misiones.length; j++) {
+                const mn = state.misiones[j];
+                const pn = state.progresoMisiones[mn.id];
+                if (!pn || pn.fallada) continue;
+                if (misionCompletada(mn, pn)) continue;
+                const cardN = root.querySelector(`[data-mision-id="${mn.id}"]`);
+                if (cardN) cardN.classList.add("mision-tarjeta--proxima");
+                break;
             }
         }
 

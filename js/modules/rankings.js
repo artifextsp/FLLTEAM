@@ -14,10 +14,14 @@ const ModuloRankings = (() => {
 
         cont.innerHTML = `
             <div class="page-header"><h2>Rankings</h2></div>
+            <p class="text-dim small">
+                Todas las tablas se ordenan de <strong>mayor</strong> a <strong>menor</strong> porcentaje
+                (vs. máximo teórico del tapete).
+            </p>
             <div class="grid">
                 <div class="card">
                     <h3>🏆 General (% vs puntaje máximo del tapete)</h3>
-                    <p class="text-dim small">Orden: mayor porcentaje al menor (promedio por jugador respecto al máximo teórico ÷ 4).</p>
+                    <p class="text-dim small">Promedio por jugador respecto al máximo teórico ÷ 4.</p>
                     <div class="tabla-wrap"><table class="tabla tabla--compact" id="rk-general">
                         <thead><tr><th>#</th><th>Jugador</th><th>% máx</th><th>Total</th><th>Prom.</th><th>Lanz.</th></tr></thead>
                         <tbody></tbody>
