@@ -431,9 +431,32 @@ input:focus, select:focus, textarea:focus {
 /* Resaltado de filas con alerta en tablas */
 .tabla tr.fila--alerta td { background: rgba(239, 68, 68, 0.06); }
 
+/* ─── ADMIN: purga de datos ─── */
+.card--purga {
+    border: 2px solid rgba(239, 68, 68, 0.35);
+    background: rgba(239, 68, 68, 0.05);
+}
+
+.purga-header {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
 .purga-botones {
     display: flex;
     flex-wrap: wrap;
-    gap: 0.6rem;
-    align-items: center;
+    gap: 1rem;
+    align-items: flex-start;
+}
+
+.purga-btn-wrap {
+    flex: 1 1 220px;
+}
+
+.btn--purga {
+    width: 100%;
+    font-size: 0.95rem;
+    min-height: 48px;
 }

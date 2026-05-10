@@ -60,8 +60,15 @@ const ModuloJugadores = (() => {
                 Aún no hay jugadores.</td></tr>`;
             return;
         }
+        // Ordenar jugadores por promedio descendente (mejor primero)
+        const ordenados = [...jugadores].sort((a, b) => {
+            const pa = Number(statsPorId[a.id]?.promedio || 0);
+            const pb = Number(statsPorId[b.id]?.promedio || 0);
+            return pb - pa;
+        });
+
         tbody.innerHTML = "";
-        jugadores.forEach((j) => {
+        ordenados.forEach((j) => {
             const s = statsPorId[j.id] || {};
             const tr = document.createElement("tr");
             tr.innerHTML = `

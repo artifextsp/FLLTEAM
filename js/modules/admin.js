@@ -19,28 +19,44 @@ const ModuloAdmin = (() => {
                     <button class="btn" id="btn-nuevo-usuario">+ Crear usuario</button>
                 </div>
             </div>
+
+            <!-- ─── PURGA DE DATOS ─── primero para que siempre sea visible -->
+            <div class="card card--purga" id="card-purga-datos">
+                <div class="purga-header">
+                    <div>
+                        <h3 style="margin:0 0 .25rem;">🗑 Purgar datos del equipo activo</h3>
+                        <p class="text-dim small" style="margin:0;">
+                            El equipo se toma del selector superior. Las acciones son
+                            <strong>irreversibles</strong>.
+                        </p>
+                    </div>
+                </div>
+                <div class="purga-botones">
+                    <div class="purga-btn-wrap">
+                        <button type="button" class="btn btn--danger btn--purga" id="btn-purga-ranking">
+                            🏆 Purgar ranking y puntajes de jugadores
+                        </button>
+                        <p class="text-dim small" style="margin:.25rem 0 0;">
+                            Elimina <em>todas</em> las partidas y puntajes. Ranking queda vacío.
+                        </p>
+                    </div>
+                    <div class="purga-btn-wrap">
+                        <button type="button" class="btn btn--warning btn--purga" id="btn-purga-analisis">
+                            📊 Purgar efectividad de misiones (análisis)
+                        </button>
+                        <p class="text-dim small" style="margin:.25rem 0 0;">
+                            Elimina solo el detalle por misión. Los puntajes totales se conservan.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ─── USUARIOS ─── -->
             <div class="card">
                 <p class="text-dim small">
                     Crea coaches, cambia roles, activa/desactiva cuentas y resetea contraseñas.
                 </p>
                 <ul class="item-list" id="lista-usuarios"></ul>
-            </div>
-            <div class="card" id="card-purga-datos">
-                <h3>Purga de datos del equipo activo</h3>
-                <p class="text-dim small">
-                    El equipo se toma del selector superior. Las acciones son irreversibles.
-                    <strong>Purgar ranking</strong> elimina todas las partidas y puntajes de jugadores.
-                    <strong>Purgar análisis</strong> elimina solo el detalle por misión (efectividad);
-                    los totales por partida pueden quedar desalineados respecto al histórico de misiones.
-                </p>
-                <div class="purga-botones">
-                    <button type="button" class="btn btn--danger" id="btn-purga-ranking">
-                        Purgar ranking y lanzamientos
-                    </button>
-                    <button type="button" class="btn btn--warning" id="btn-purga-analisis">
-                        Purgar datos de efectividad (misiones)
-                    </button>
-                </div>
             </div>`;
 
         cont.querySelector("#btn-nuevo-usuario")

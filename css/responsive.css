@@ -137,6 +137,7 @@
     }
 
     .purga-botones { flex-direction: column; align-items: stretch; }
+    .purga-btn-wrap { flex: 1 1 100%; }
     .purga-botones .btn { width: 100%; }
 
     /* Alertas: padding cómodo en móvil */
