@@ -112,10 +112,14 @@ with check (
     )
 );
 
+-- security definer para evitar recursión infinita de RLS
+-- (la política de perfiles_usuario se referencia a sí misma)
 create or replace function public.es_admin_actual()
 returns boolean
 language sql
 stable
+security definer
+set search_path = public
 as $$
     select exists (
         select 1
@@ -285,14 +289,18 @@ begin
 end;
 $$;
 
+-- security definer para evitar recursión de RLS al leer perfil propio
 create or replace function public.mi_perfil()
 returns public.perfiles_usuario
 language sql
 stable
+security definer
+set search_path = public
 as $$
     select *
     from public.perfiles_usuario
-    where user_id = auth.uid();
+    where user_id = auth.uid()
+    limit 1;
 $$;
 
 create or replace function public.marcar_password_cambiada()
