@@ -106,9 +106,11 @@ const ModuloLanzadas = (() => {
         // X = total recorridos base azul
         // Y = total recorridos base roja
         // Z = X + Y   (suma de todos los recorridos, ambas bases)
-        // K = 150 - Z  (tiempo libre que queda para cambios de mecanismo)
-        // P = K / 2    (ese tiempo se reparte entre las 2 bases)
-        // T_cambio = P / N_lanzadas  (tiempo disponible por cambio en cada base)
+        // K = 150 − Z  (tiempo libre para cambios de mecanismo)
+        // P = K ÷ 2    (se reparte entre las 2 bases)
+        // El primer mecanismo inicia puesto → cambios = N_lanzadas − 1
+        // T_azul = P ÷ (nAzul − 1)
+        // T_roja = P ÷ (nRoja − 1)
         const X = byBase.azul.reduce((s, x) => s + x.t, 0);
         const Y = byBase.roja.reduce((s, x) => s + x.t, 0);
         const Z = X + Y;
@@ -116,9 +118,11 @@ const ModuloLanzadas = (() => {
         const P = K / 2;
         const nAzul = byBase.azul.length;
         const nRoja = byBase.roja.length;
-        // Número de lanzadas de la base con más lanzadas (para usar como divisor)
-        const nMax = Math.max(nAzul, nRoja, 1);
-        const tCambio = P / nMax;
+        // Cambios = lanzadas − 1 (el primer mecanismo inicia puesto)
+        const cambiosAzul = Math.max(nAzul - 1, 1);
+        const cambiosRoja = Math.max(nRoja - 1, 1);
+        const tAzul = P / cambiosAzul;
+        const tRoja = P / cambiosRoja;
         const excede = Z > PARTIDA_FLL_SEG;
         const sinTiemposAzul = byBase.azul.some((x) => x.t === 0);
         const sinTiemposRoja = byBase.roja.some((x) => x.t === 0);
@@ -148,24 +152,33 @@ const ModuloLanzadas = (() => {
             </div>`;
         }
 
-        // ── Texto del resultado final ────────────────────────────────────
+        // ── Resultado final por base ─────────────────────────────────────
+        function chipCambio(t, cambios, color) {
+            const cls = t < 8 ? "lan-calc-result--warn"
+                : t < 15 ? "lan-calc-result--ok" : "lan-calc-result--great";
+            return `<div class="lan-calc-result lan-calc-result--base ${cls}">
+                <span class="lan-calc-result-label" style="color:inherit;opacity:.85;">
+                    ${color === "azul" ? "🟦 Base azul" : "🟥 Base roja"}
+                    · ${cambios} cambio(s)
+                </span>
+                <strong>${t.toFixed(1)}s por cambio</strong>
+            </div>`;
+        }
+
         let resultadoHtml;
         if (excede) {
             resultadoHtml = `<p class="lanzadas-resumen__alerta">
                 ⚠ La suma de recorridos (<strong>${Z}s</strong>) supera los <strong>${PARTIDA_FLL_SEG}s</strong>
-                de la partida. Exceso: <strong>${Math.abs(K)}s</strong> — ajusta los tiempos de las lanzadas.
+                de la partida. Exceso: <strong>${Math.abs(K)}s</strong> — ajusta los tiempos.
             </p>`;
         } else if (hayIncomplejos) {
             resultadoHtml = `<p class="text-dim small" style="margin:.5rem 0 0;">
                 ⚠ Algunas lanzadas no tienen tiempo configurado — el cálculo es parcial.
             </p>`;
         } else {
-            const colorCambio = tCambio < 8
-                ? "lan-calc-result--warn"
-                : tCambio < 15 ? "lan-calc-result--ok" : "lan-calc-result--great";
-            resultadoHtml = `<div class="lan-calc-result ${colorCambio}">
-                ⏱ Tiempo disponible por cambio de mecanismo por base:
-                <strong>${tCambio.toFixed(1)}s</strong>
+            resultadoHtml = `<div class="lan-calc-result-row">
+                ${nAzul > 0 ? chipCambio(tAzul, cambiosAzul, "azul") : ""}
+                ${nRoja > 0 ? chipCambio(tRoja, cambiosRoja, "roja") : ""}
             </div>`;
         }
 
@@ -192,10 +205,19 @@ const ModuloLanzadas = (() => {
                 <span class="lan-calc-label">Por base (P = K ÷ 2)</span>
                 <span class="lan-calc-val">${K}s ÷ 2 = <strong>${P.toFixed(1)}s</strong></span>
             </div>
-            <div class="lan-calc-paso lan-calc-paso--result">
-                <span class="lan-calc-label">Por lanzada (P ÷ ${nMax} lanzadas)</span>
-                <span class="lan-calc-val">${P.toFixed(1)}s ÷ ${nMax} = <strong>${tCambio.toFixed(1)}s por cambio</strong></span>
+            <div class="lan-calc-paso lan-calc-paso--sep lan-calc-paso--note">
+                <span class="lan-calc-label" style="font-style:italic;">
+                    El 1er mecanismo inicia puesto → cambios = lanzadas − 1
+                </span>
             </div>
+            ${nAzul > 0 ? `<div class="lan-calc-paso lan-calc-paso--result">
+                <span class="lan-calc-label">🟦 Azul: P ÷ ${cambiosAzul} cambio(s)</span>
+                <span class="lan-calc-val">${P.toFixed(1)}s ÷ ${cambiosAzul} = <strong>${tAzul.toFixed(1)}s</strong></span>
+            </div>` : ""}
+            ${nRoja > 0 ? `<div class="lan-calc-paso lan-calc-paso--result">
+                <span class="lan-calc-label">🟥 Roja: P ÷ ${cambiosRoja} cambio(s)</span>
+                <span class="lan-calc-val">${P.toFixed(1)}s ÷ ${cambiosRoja} = <strong>${tRoja.toFixed(1)}s</strong></span>
+            </div>` : ""}
         </div>`;
 
         el.innerHTML = `

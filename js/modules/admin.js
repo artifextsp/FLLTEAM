@@ -4,11 +4,29 @@
 
 const ModuloAdmin = (() => {
     async function render(cont) {
-        const esAdmin = await FllAuth.esAdmin();
+        let esAdmin = false;
+        try {
+            esAdmin = await FllAuth.esAdmin();
+        } catch (err) {
+            cont.innerHTML = `<div class="card">
+                <h3 style="margin:0 0 .5rem;">Error al verificar permisos</h3>
+                <p class="text-dim small">${err?.message || String(err)}</p>
+                <p class="text-dim small">
+                    Asegúrate de haber ejecutado el script
+                    <code>sql/06_admin_purgas.sql</code> y de tener rol
+                    <strong>admin</strong> en tu perfil de Supabase.
+                </p>
+            </div>`;
+            return;
+        }
         if (!esAdmin) {
-            cont.innerHTML = `<div class="card"><p class="text-dim">
-                No tienes permisos para ver esta sección.
-            </p></div>`;
+            cont.innerHTML = `<div class="card">
+                <h3 style="margin:0 0 .5rem;">Acceso restringido</h3>
+                <p class="text-dim small">
+                    Tu cuenta no tiene rol <strong>admin</strong> activo.
+                    Pide a otro administrador que cambie tu rol en esta misma sección.
+                </p>
+            </div>`;
             return;
         }
 

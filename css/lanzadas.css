@@ -451,3 +451,26 @@
     background: rgba(239, 68, 68, 0.12);
     border-color: rgba(239, 68, 68, 0.4);
 }
+
+.lan-calc-result-row {
+    display: flex;
+    gap: 0.75rem;
+    flex-wrap: wrap;
+}
+
+.lan-calc-result--base {
+    flex: 1 1 160px;
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}
+
+.lan-calc-result-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+}
+
+.lan-calc-paso--note .lan-calc-label {
+    color: var(--c-text-dim);
+    font-size: 0.82rem;
+}
