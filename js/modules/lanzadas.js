@@ -548,6 +548,67 @@ const ModuloLanzadas = (() => {
         const html = plantillaFormulario(l);
         await abrirModal(`Editar · ${l.nombre}`, html, {
             okTexto: "Guardar",
+            onMount: (body) => {
+                const tiempoInput = body.querySelector("#f-tiempo");
+                const baseSelect  = body.querySelector("#f-base");
+                const preview     = body.querySelector("#f-preview-tiempos");
+                if (!tiempoInput || !baseSelect || !preview) return;
+
+                function recalcular() {
+                    const nuevoT = parseInt(tiempoInput.value, 10);
+                    const base   = baseSelect.value;
+                    if (!nuevoT || nuevoT < 1 || !base || !state) {
+                        preview.innerHTML = "";
+                        return;
+                    }
+                    // Reemplaza el tiempo/base de esta lanzada en la lista actual
+                    const byBase = { azul: [], roja: [] };
+                    state.lanzadas.forEach((lz) => {
+                        const esEsta  = lz.id === l.id;
+                        const baseEfectiva = esEsta ? base : (lz.base || "");
+                        const tEfectivo    = esEsta ? nuevoT
+                            : (lz.tiempo_recorrido_seg > 0 ? Number(lz.tiempo_recorrido_seg) : 0);
+                        if (baseEfectiva === "azul" || baseEfectiva === "roja") {
+                            byBase[baseEfectiva].push(tEfectivo);
+                        }
+                    });
+                    const X = byBase.azul.reduce((s, t) => s + t, 0);
+                    const Y = byBase.roja.reduce((s, t) => s + t, 0);
+                    const Z = X + Y;
+                    const K = PARTIDA_FLL_SEG - Z;
+                    const P = K / 2;
+                    const cambiosAzul = Math.max(byBase.azul.length - 1, 1);
+                    const cambiosRoja = Math.max(byBase.roja.length - 1, 1);
+                    const tAzul = P / cambiosAzul;
+                    const tRoja = P / cambiosRoja;
+                    const excede = Z > PARTIDA_FLL_SEG;
+
+                    const chip = (t) => {
+                        const col = t < 8 ? "#fca5a5" : t < 15 ? "#fde68a" : "#86efac";
+                        return `<strong style="color:${col};">${t.toFixed(1)}s</strong>`;
+                    };
+
+                    preview.innerHTML = `
+                        <div class="lan-preview-box">
+                            <p class="lan-preview-titulo">⏱ Previsualización del cálculo</p>
+                            <p class="lan-preview-row">
+                                🟦 ${X}s + 🟥 ${Y}s = <strong>${Z}s</strong> recorridos
+                                · libre: <strong>${K}s</strong> ÷ 2 = <strong>${P.toFixed(1)}s</strong> por base
+                            </p>
+                            ${excede
+                                ? `<p class="lan-preview-warn">⚠ Supera los ${PARTIDA_FLL_SEG}s — reduce algún tiempo</p>`
+                                : `<p class="lan-preview-row">
+                                    🟦 Azul · ${cambiosAzul} cambio(s): ${chip(tAzul)} por cambio
+                                    &nbsp;|&nbsp;
+                                    🟥 Roja · ${cambiosRoja} cambio(s): ${chip(tRoja)} por cambio
+                                </p>`}
+                        </div>`;
+                }
+
+                tiempoInput.addEventListener("input", recalcular);
+                baseSelect.addEventListener("change", recalcular);
+                recalcular(); // mostrar cálculo inicial al abrir el modal
+            },
             onSubmit: async (body) => {
                 const campos = leerFormulario(body);
                 if (!campos.nombre) {
@@ -621,6 +682,7 @@ const ModuloLanzadas = (() => {
                     Cuánto tarda el equipo en ejecutar esta lanzada en entrenamiento (cronómetro).
                 </div>
             </div>
+            <div id="f-preview-tiempos"></div>
             <div class="grid grid-3">
                 <div class="form-field">
                     <label>Orientación</label>

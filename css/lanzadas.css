@@ -474,3 +474,32 @@
     color: var(--c-text-dim);
     font-size: 0.82rem;
 }
+
+/* ─── Previsualización en vivo dentro del modal ────────────────────── */
+.lan-preview-box {
+    background: rgba(59, 130, 246, 0.08);
+    border: 1px solid rgba(59, 130, 246, 0.3);
+    border-radius: var(--radius);
+    padding: 0.65rem 0.85rem;
+    margin-top: 0.25rem;
+    font-size: 0.84rem;
+    line-height: 1.5;
+}
+
+.lan-preview-titulo {
+    margin: 0 0 0.35rem;
+    font-weight: 700;
+    font-size: 0.82rem;
+    color: var(--c-text-dim);
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.lan-preview-row { margin: 0 0 0.2rem; }
+.lan-preview-row:last-child { margin-bottom: 0; }
+
+.lan-preview-warn {
+    margin: 0;
+    color: #fca5a5;
+    font-weight: 600;
+}

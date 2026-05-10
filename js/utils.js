@@ -62,6 +62,11 @@ function abrirModal(titulo, contenido, opts = {}) {
         else body.appendChild(contenido);
         document.body.appendChild(overlay);
 
+        // Callback de montaje: se ejecuta tras renderizar pero antes de que el usuario interactúe
+        if (typeof opts.onMount === "function") {
+            try { opts.onMount(body); } catch (_) {}
+        }
+
         const cerrar = (v) => { overlay.remove(); resolve(v); };
 
         overlay.querySelector('[data-rol="cancel"]').addEventListener(
