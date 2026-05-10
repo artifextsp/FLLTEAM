@@ -69,48 +69,26 @@ where p.user_id is null;
 
 alter table public.perfiles_usuario enable row level security;
 
+-- Las políticas usan es_admin_actual() (security definer) para evitar
+-- la recursión infinita que causaría una subconsulta directa a esta tabla.
 drop policy if exists "perfiles_select_propios_o_admin" on public.perfiles_usuario;
 create policy "perfiles_select_propios_o_admin" on public.perfiles_usuario
 for select to authenticated
 using (
     user_id = auth.uid()
-    or exists (
-        select 1
-        from public.perfiles_usuario p
-        where p.user_id = auth.uid()
-          and p.rol = 'admin'
-          and p.activo = true
-    )
+    or public.es_admin_actual()
 );
 
 drop policy if exists "perfiles_update_admin" on public.perfiles_usuario;
 create policy "perfiles_update_admin" on public.perfiles_usuario
 for update to authenticated
-using (
-    exists (
-        select 1
-        from public.perfiles_usuario p
-        where p.user_id = auth.uid()
-          and p.rol = 'admin'
-          and p.activo = true
-    )
-)
-with check (
-    rol in ('admin', 'coach')
-);
+using (public.es_admin_actual())
+with check (rol in ('admin', 'coach'));
 
 drop policy if exists "perfiles_insert_admin" on public.perfiles_usuario;
 create policy "perfiles_insert_admin" on public.perfiles_usuario
 for insert to authenticated
-with check (
-    exists (
-        select 1
-        from public.perfiles_usuario p
-        where p.user_id = auth.uid()
-          and p.rol = 'admin'
-          and p.activo = true
-    )
-);
+with check (public.es_admin_actual());
 
 -- security definer para evitar recursión infinita de RLS
 -- (la política de perfiles_usuario se referencia a sí misma)
