@@ -345,3 +345,109 @@
     background: rgba(239, 68, 68, 0.15);
     border-color: rgba(239, 68, 68, 0.55);
 }
+.lan-trans--warn {
+    color: #fde68a;
+    background: rgba(234, 179, 8, 0.12);
+    border-color: rgba(234, 179, 8, 0.45);
+}
+
+/* ─── Resumen de tiempos: grid de listas por base ─────────────────── */
+.lan-bases-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+    margin-bottom: 1.25rem;
+}
+
+@media (max-width: 640px) {
+    .lan-bases-grid { grid-template-columns: 1fr; }
+}
+
+.lan-base-col { display: flex; flex-direction: column; gap: 0.5rem; }
+
+.lan-base-titulo {
+    margin: 0;
+    font-size: 0.9rem;
+    font-weight: 700;
+    padding: 0.3rem 0.6rem;
+    border-radius: var(--radius);
+}
+.lan-base-titulo--azul {
+    background: rgba(59, 130, 246, 0.15);
+    border: 1px solid rgba(59, 130, 246, 0.4);
+}
+.lan-base-titulo--roja {
+    background: rgba(239, 68, 68, 0.12);
+    border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+/* ─── Pasos del cálculo ────────────────────────────────────────────── */
+.lan-calc-pasos {
+    display: flex;
+    flex-direction: column;
+    gap: 0.35rem;
+    background: var(--c-bg-2);
+    border: 1px solid var(--c-bg-3);
+    border-radius: var(--radius);
+    padding: 0.9rem 1rem;
+    margin-bottom: 0.75rem;
+    font-size: 0.87rem;
+}
+
+.lan-calc-paso {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+}
+
+.lan-calc-label {
+    color: var(--c-text-dim);
+    flex: 1 1 200px;
+}
+
+.lan-calc-val {
+    font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+    font-size: 0.85rem;
+    white-space: nowrap;
+}
+
+.lan-calc-paso--sep {
+    border-top: 1px solid var(--c-bg-3);
+    padding-top: 0.35rem;
+    margin-top: 0.15rem;
+}
+
+.lan-calc-paso--result {
+    border-top: 2px solid var(--c-primary);
+    padding-top: 0.45rem;
+    margin-top: 0.2rem;
+    font-weight: 700;
+}
+.lan-calc-paso--result .lan-calc-label { color: var(--c-text); }
+.lan-calc-paso--result .lan-calc-val   { font-size: 0.95rem; }
+
+/* ─── Resultado final destacado ────────────────────────────────────── */
+.lan-calc-result {
+    padding: 0.6rem 1rem;
+    border-radius: var(--radius);
+    font-size: 0.95rem;
+    font-weight: 600;
+    border: 1px solid;
+}
+.lan-calc-result--great {
+    color: #86efac;
+    background: rgba(34, 197, 94, 0.12);
+    border-color: rgba(34, 197, 94, 0.4);
+}
+.lan-calc-result--ok {
+    color: #fde68a;
+    background: rgba(234, 179, 8, 0.1);
+    border-color: rgba(234, 179, 8, 0.4);
+}
+.lan-calc-result--warn {
+    color: #fca5a5;
+    background: rgba(239, 68, 68, 0.12);
+    border-color: rgba(239, 68, 68, 0.4);
+}

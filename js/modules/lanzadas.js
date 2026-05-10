@@ -90,115 +90,122 @@ const ModuloLanzadas = (() => {
             return;
         }
         el.hidden = false;
+
+        // ── Agrupar y ordenar por base ──────────────────────────────────
         const byBase = { azul: [], roja: [] };
         lanzadas.forEach((l) => {
             if (l.base === "azul" || l.base === "roja") {
-                // Guardar el tiempo tal como viene de la DB (0 si no tiene)
                 const t = (l.tiempo_recorrido_seg != null && l.tiempo_recorrido_seg > 0)
-                    ? Number(l.tiempo_recorrido_seg)
-                    : 0;
+                    ? Number(l.tiempo_recorrido_seg) : 0;
                 byBase[l.base].push({ id: l.id, nombre: l.nombre, t, orden: Number(l.orden) || 0 });
             }
         });
-        ["azul", "roja"].forEach((k) =>
-            byBase[k].sort((a, b) => a.orden - b.orden)
-        );
+        ["azul", "roja"].forEach((k) => byBase[k].sort((a, b) => a.orden - b.orden));
 
-        function bloqueBase(titulo, key) {
-            const arr = byBase[key];
-            const n = arr.length;
+        // ── Cálculo global (fórmula del coach) ─────────────────────────
+        // X = total recorridos base azul
+        // Y = total recorridos base roja
+        // Z = X + Y   (suma de todos los recorridos, ambas bases)
+        // K = 150 - Z  (tiempo libre que queda para cambios de mecanismo)
+        // P = K / 2    (ese tiempo se reparte entre las 2 bases)
+        // T_cambio = P / N_lanzadas  (tiempo disponible por cambio en cada base)
+        const X = byBase.azul.reduce((s, x) => s + x.t, 0);
+        const Y = byBase.roja.reduce((s, x) => s + x.t, 0);
+        const Z = X + Y;
+        const K = PARTIDA_FLL_SEG - Z;
+        const P = K / 2;
+        const nAzul = byBase.azul.length;
+        const nRoja = byBase.roja.length;
+        // Número de lanzadas de la base con más lanzadas (para usar como divisor)
+        const nMax = Math.max(nAzul, nRoja, 1);
+        const tCambio = P / nMax;
+        const excede = Z > PARTIDA_FLL_SEG;
+        const sinTiemposAzul = byBase.azul.some((x) => x.t === 0);
+        const sinTiemposRoja = byBase.roja.some((x) => x.t === 0);
+        const hayIncomplejos = sinTiemposAzul || sinTiemposRoja;
 
-            if (n === 0) {
-                return `<div class="lanzadas-resumen__col lanzadas-resumen__col--${key}">
-                    <h4>${titulo}</h4>
-                    <p class="text-dim small" style="margin:0;">Sin lanzadas asignadas a esta base.</p>
+        // ── Resumen de lanzadas por base (lista visual) ─────────────────
+        function listaBase(arr, label, color) {
+            if (arr.length === 0) {
+                return `<div class="lan-base-col">
+                    <p class="lan-base-titulo lan-base-titulo--${color}">${label}</p>
+                    <p class="text-dim small" style="margin:0;">Sin lanzadas.</p>
                 </div>`;
             }
-
-            // Lanzadas con tiempo configurado (para la suma real)
-            const conTiempo = arr.filter((x) => x.t > 0);
-            // Suma calculada exactamente a partir de los mismos objetos que se renderizan
-            const sum = conTiempo.reduce((s, x) => s + x.t, 0);
-            const restante = PARTIDA_FLL_SEG - sum;
-            // Huecos entre lanzadas CON tiempo configurado (los cambios de mecanismo planificados)
-            const huecos = Math.max(0, conTiempo.length - 1);
-            const porHueco = huecos > 0 ? restante / huecos : restante;
-            const sobra = restante < 0;
-
-            // Verificación: suma + restante siempre = PARTIDA_FLL_SEG (150)
-            // Se muestra explícitamente para que el coach pueda validar los números
-
-            const items = arr.map((x, i) => {
-                const esUltima = i === n - 1;
-                const sinTiempo = x.t === 0;
-
-                // Tiempo de cambio solo aplica entre lanzadas que SÍ tienen tiempo
-                let transTxt = "";
-                if (!esUltima) {
-                    if (sinTiempo || arr[i + 1]?.t === 0) {
-                        transTxt = `<span class="lan-trans lan-trans--warn">⏱ Sin tiempo configurado</span>`;
-                    } else if (sobra) {
-                        transTxt = `<span class="lan-trans lan-trans--bad">⚠ excede ${PARTIDA_FLL_SEG}s — ajusta tiempos</span>`;
-                    } else if (huecos > 0) {
-                        transTxt = `<span class="lan-trans">↳ cambio mecanismo: <strong>~${porHueco.toFixed(0)}s</strong></span>`;
-                    }
-                } else {
-                    if (sobra) {
-                        transTxt = `<span class="lan-trans lan-trans--bad">⚠ exceso: ${Math.abs(restante)}s — revisa tiempos</span>`;
-                    } else {
-                        transTxt = `<span class="lan-trans lan-trans--ok">✓ margen restante: <strong>${restante}s</strong> (${sum}s + ${restante}s = ${PARTIDA_FLL_SEG}s)</span>`;
-                    }
-                }
-
-                return `<li>
+            const sumBase = arr.reduce((s, x) => s + x.t, 0);
+            const items = arr.map((x, i) =>
+                `<li>
                     <span class="lan-num">${i + 1}</span>
                     <span class="lan-nombre">${escapeHtml(x.nombre)}</span>
                     <span class="lan-t">${x.t > 0 ? `⏱ ${x.t}s` : `<span class="text-dim">sin tiempo</span>`}</span>
-                    ${transTxt}
-                </li>`;
-            }).join("");
-
-            const tieneSinTiempo = arr.some((x) => x.t === 0);
-            const cabezera = sobra
-                ? `<p class="lanzadas-resumen__alerta">
-                    ⚠ La suma de recorridos (<strong>${sum}s</strong>) supera los <strong>${PARTIDA_FLL_SEG}s</strong>
-                    de la partida. Exceso: <strong>${Math.abs(restante)}s</strong> — ajusta los tiempos.
-                </p>`
-                : tieneSinTiempo
-                ? `<p class="text-dim small" style="margin:0 0 .5rem;">
-                    Algunas lanzadas no tienen tiempo configurado — el cálculo de cambios es parcial.
-                    <strong>${sum}s</strong> de recorridos planificados · <strong>${restante}s</strong> de margen.
-                </p>`
-                : (huecos > 0
-                    ? `<p class="text-dim small" style="margin:0 0 .5rem;">
-                        Ecuación: <strong>${arr.map((x) => x.t + "s").join(" + ")}</strong>
-                        = <strong>${sum}s</strong> recorridos + <strong>${restante}s</strong> para
-                        <strong>${huecos}</strong> cambio(s) ≈ <strong>${porHueco.toFixed(0)}s</strong> c/u
-                        = <strong>${PARTIDA_FLL_SEG}s</strong> ✓
-                    </p>`
-                    : `<p class="text-dim small" style="margin:0 0 .5rem;">
-                        Recorrido: <strong>${sum}s</strong> · Margen libre: <strong>${restante}s</strong>
-                        (total: ${sum}s + ${restante}s = ${PARTIDA_FLL_SEG}s ✓)
-                    </p>`);
-
-            return `<div class="lanzadas-resumen__col lanzadas-resumen__col--${key}">
-                <h4>${titulo} · <span class="text-dim">${n} lanzada(s)</span></h4>
-                ${cabezera}
+                </li>`
+            ).join("");
+            return `<div class="lan-base-col">
+                <p class="lan-base-titulo lan-base-titulo--${color}">
+                    ${label} · <strong>${sumBase}s</strong>
+                </p>
                 <ol class="lan-secuencia">${items}</ol>
             </div>`;
         }
 
+        // ── Texto del resultado final ────────────────────────────────────
+        let resultadoHtml;
+        if (excede) {
+            resultadoHtml = `<p class="lanzadas-resumen__alerta">
+                ⚠ La suma de recorridos (<strong>${Z}s</strong>) supera los <strong>${PARTIDA_FLL_SEG}s</strong>
+                de la partida. Exceso: <strong>${Math.abs(K)}s</strong> — ajusta los tiempos de las lanzadas.
+            </p>`;
+        } else if (hayIncomplejos) {
+            resultadoHtml = `<p class="text-dim small" style="margin:.5rem 0 0;">
+                ⚠ Algunas lanzadas no tienen tiempo configurado — el cálculo es parcial.
+            </p>`;
+        } else {
+            const colorCambio = tCambio < 8
+                ? "lan-calc-result--warn"
+                : tCambio < 15 ? "lan-calc-result--ok" : "lan-calc-result--great";
+            resultadoHtml = `<div class="lan-calc-result ${colorCambio}">
+                ⏱ Tiempo disponible por cambio de mecanismo por base:
+                <strong>${tCambio.toFixed(1)}s</strong>
+            </div>`;
+        }
+
+        // ── Pasos del cálculo visibles ───────────────────────────────────
+        const pasosHtml = `
+        <div class="lan-calc-pasos">
+            <div class="lan-calc-paso">
+                <span class="lan-calc-label">🟦 Total Base Azul (X)</span>
+                <span class="lan-calc-val">${byBase.azul.map((x) => x.t + "s").join(" + ") || "—"} = <strong>${X}s</strong></span>
+            </div>
+            <div class="lan-calc-paso">
+                <span class="lan-calc-label">🟥 Total Base Roja (Y)</span>
+                <span class="lan-calc-val">${byBase.roja.map((x) => x.t + "s").join(" + ") || "—"} = <strong>${Y}s</strong></span>
+            </div>
+            <div class="lan-calc-paso lan-calc-paso--sep">
+                <span class="lan-calc-label">Suma total recorridos (Z = X + Y)</span>
+                <span class="lan-calc-val">${X}s + ${Y}s = <strong>${Z}s</strong></span>
+            </div>
+            <div class="lan-calc-paso">
+                <span class="lan-calc-label">Tiempo libre para cambios (K = 150 − Z)</span>
+                <span class="lan-calc-val">${PARTIDA_FLL_SEG}s − ${Z}s = <strong>${K}s</strong></span>
+            </div>
+            <div class="lan-calc-paso">
+                <span class="lan-calc-label">Por base (P = K ÷ 2)</span>
+                <span class="lan-calc-val">${K}s ÷ 2 = <strong>${P.toFixed(1)}s</strong></span>
+            </div>
+            <div class="lan-calc-paso lan-calc-paso--result">
+                <span class="lan-calc-label">Por lanzada (P ÷ ${nMax} lanzadas)</span>
+                <span class="lan-calc-val">${P.toFixed(1)}s ÷ ${nMax} = <strong>${tCambio.toFixed(1)}s por cambio</strong></span>
+            </div>
+        </div>`;
+
         el.innerHTML = `
             <h3 style="margin-top:0;">⏱ Tiempos por base y cambios de mecanismo</h3>
-            <p class="text-dim small">
-                En competición ambas bases corren en <strong>paralelo</strong> dentro de la misma ventana
-                de <strong>${PARTIDA_FLL_SEG}s</strong>. Para cada base: suma de recorridos + cambios
-                de mecanismo = ${PARTIDA_FLL_SEG}s.
-            </p>
-            <div class="lanzadas-resumen__grid">
-                ${bloqueBase("🟦 Base azul", "azul")}
-                ${bloqueBase("🟥 Base roja", "roja")}
-            </div>`;
+            <div class="lan-bases-grid">
+                ${listaBase(byBase.azul, "🟦 Base azul", "azul")}
+                ${listaBase(byBase.roja, "🟥 Base roja", "roja")}
+            </div>
+            ${pasosHtml}
+            ${resultadoHtml}`;
     }
 
     // --------------------------------------------------------------
