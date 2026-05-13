@@ -1,14 +1,16 @@
 // =====================================================================
 //  Módulo DASHBOARD — Seguimiento en tiempo real para el entrenador
 //  ------------------------------------------------------------------
-//  Flujo AUTO-CADENA por base:
-//    • Al iniciar partida → ambas bases arrancan su 1.ª lanzada
-//    • "Llegó a base"     → lanzada termina, cambio de mecanismo arranca AUTOMÁTICAMENTE
-//    • "Terminó cambio"   → cambio termina, siguiente lanzada arranca AUTOMÁTICAMENTE
-//    • "Fallida"          → lanzada marcada, siguiente paso arranca AUTOMÁTICAMENTE
-//    • Cuando una base termina → revisa si la otra tiene un paso pendiente y lo arranca
+//  Un solo robot: inicia en Base Azul, luego pasa a Base Roja.
 //
-//  Botones del entrenador (solo estos):
+//  Flujo secuencial (Base Azul completa → Base Roja):
+//    1. Iniciar partida  → Base Azul arranca su 1.ª lanzada automáticamente
+//    2. "Llegó a base"   → lanzada termina; cambio de mecanismo arranca SOLO
+//    3. "Terminó cambio" → cambio termina; siguiente lanzada arranca SOLA
+//    4. "Fallida"        → lanzada marcada; siguiente paso arranca SOLO
+//    5. Base Azul termina → Base Roja arranca su 1.ª lanzada AUTOMÁTICAMENTE
+//
+//  Botones del entrenador:
 //    ⏹ Llegó a base · ⏹ Terminó cambio · ✗ Fallida
 // =====================================================================
 
@@ -212,11 +214,11 @@ const ModuloDashboard = (() => {
             if (segs <= 0) finalizarGame(true);
         }, 200);
 
-        // Auto-arrancar primera lanzada de AMBAS bases simultáneamente
+        // El robot inicia en Base Azul; Roja arranca solo cuando Azul termina
         autoArrancarPaso("azul");
-        autoArrancarPaso("roja");
+        renderBase("roja"); // mostrar pantalla de espera en Roja
 
-        toast("¡Partida iniciada! Las lanzadas arrancaron automáticamente.", "success");
+        toast("¡Partida iniciada! Base Azul en curso. Base Roja arrancará al finalizar.", "success");
     }
 
     function finalizarGame(porTiempo = false) {
@@ -302,7 +304,6 @@ const ModuloDashboard = (() => {
             </div>`;
             renderHistorial(base);
             actualizarTabProg(base);
-            // Cuando una base termina, revisar si la otra tiene algo pendiente
             verificarOtraBase(base);
             return;
         }
@@ -312,6 +313,28 @@ const ModuloDashboard = (() => {
         const total     = sec.secuencia.length;
         const esLanzada = paso.tipo === "lanzada";
         const esCambio  = paso.tipo === "cambio";
+
+        // Base Roja en espera mientras Base Azul no ha terminado
+        if (base === "roja" && paso.estado === "pendiente" && state.gameIniciado) {
+            const secAzul = state.secuencias["azul"];
+            const azulTerminada = !secAzul || secAzul.curIdx >= secAzul.secuencia.length;
+            if (!azulTerminada) {
+                const hechoAzul = secAzul.secuencia.filter(
+                    (p) => p.estado === "completado" || p.estado === "fallido"
+                ).length;
+                const totalAzul = secAzul.secuencia.length;
+                pasoCont.innerHTML = `<div class="dash-esperando-base">
+                    <div class="dash-esperando-icono">🟥</div>
+                    <div class="dash-esperando-titulo">Base Roja en espera</div>
+                    <div class="dash-esperando-sub">
+                        El robot terminará Base Azul primero
+                        <span class="dash-esperando-prog">${hechoAzul}/${totalAzul} pasos</span>
+                    </div>
+                </div>`;
+                actualizarTabProg(base);
+                return;
+            }
+        }
 
         // ── Calcular anchos de barras ────────────────────────────────
         const tiempoPlan = paso.tiempoPlan || 0;
@@ -523,18 +546,24 @@ const ModuloDashboard = (() => {
     }
 
     // ------------------------------------------------------------------
-    //  Cuando una base termina, arranca pasos pendientes en la otra
+    //  Cuando Base Azul termina → arranca Base Roja automáticamente
+    //  (un solo robot: Azul primero, Roja después)
     // ------------------------------------------------------------------
     function verificarOtraBase(baseTerminada) {
-        const otra = baseTerminada === "azul" ? "roja" : "azul";
-        const sec  = state?.secuencias[otra];
-        if (!sec || sec.curIdx >= sec.secuencia.length) return;
+        // Solo aplica el traspaso Azul → Roja (el robot pasa a la otra base)
+        if (baseTerminada !== "azul") return;
+        if (!state || !state.gameIniciado) return;
+
+        const sec = state.secuencias["roja"];
+        if (!sec || sec.secuencia.length === 0) return;
+        if (sec.curIdx >= sec.secuencia.length) return; // Roja ya terminó
 
         const paso = sec.secuencia[sec.curIdx];
-        // Si hay un paso pendiente en la otra base (no debería ocurrir con el
-        // auto-arranque normal, pero cubre el caso de bases asimétricas)
-        if (paso.estado === "pendiente" && state.gameIniciado) {
-            autoArrancarPaso(otra);
+        if (paso.estado === "pendiente") {
+            toast("Base Azul completada — arrancando Base Roja 🟥", "success");
+            autoArrancarPaso("roja");
+            // Cambiar la vista al tab de Roja automáticamente
+            mostrarBase("roja");
         }
     }
 

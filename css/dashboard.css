@@ -258,6 +258,47 @@
     padding: .5rem;
 }
 
+/* ── Base en espera (Roja esperando que Azul termine) ───────────── */
+.dash-esperando-base {
+    background: rgba(251,191,36,.06);
+    border: 1px dashed rgba(251,191,36,.35);
+    border-radius: .75rem;
+    padding: 1.5rem 1rem;
+    text-align: center;
+    margin-bottom: .75rem;
+}
+
+.dash-esperando-icono {
+    font-size: 2.5rem;
+    margin-bottom: .4rem;
+}
+
+.dash-esperando-titulo {
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: #fbbf24;
+    margin-bottom: .3rem;
+}
+
+.dash-esperando-sub {
+    font-size: .85rem;
+    color: var(--text-dim, #9ca3af);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: .35rem;
+}
+
+.dash-esperando-prog {
+    display: inline-block;
+    padding: .2rem .6rem;
+    background: rgba(251,191,36,.12);
+    border-radius: 99px;
+    color: #fbbf24;
+    font-size: .8rem;
+    font-weight: 600;
+}
+
 /* ── Secuencia completada ────────────────────────────────────────── */
 .dash-secuencia-ok {
     background: rgba(74,222,128,.08);
