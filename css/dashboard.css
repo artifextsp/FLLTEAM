@@ -1,0 +1,435 @@
+/* =====================================================================
+   Dashboard del Entrenador — Mobile-first
+   ===================================================================== */
+
+/* ── Contenedor raíz ─────────────────────────────────────────────── */
+.dashboard {
+    max-width: 640px;
+    margin: 0 auto;
+    padding: 0 0 4rem;
+}
+
+/* ── Cabecera con el timer de partida ────────────────────────────── */
+.dash-header {
+    padding: 1rem;
+}
+
+.dash-header h2 {
+    margin: 0 0 .75rem;
+    font-size: 1.1rem;
+    color: var(--text-dim, #9ca3af);
+    letter-spacing: .05em;
+}
+
+.dash-game-timer {
+    background: var(--card-bg, #1e293b);
+    border: 1px solid var(--border, #334155);
+    border-radius: .75rem;
+    padding: 1rem;
+    text-align: center;
+    transition: border-color .3s;
+}
+
+.dash-timer-estado {
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--text-dim, #9ca3af);
+    margin-bottom: .25rem;
+}
+
+.dash-timer-tiempo {
+    font-size: 3rem;
+    font-weight: 700;
+    font-variant-numeric: tabular-nums;
+    letter-spacing: .05em;
+    line-height: 1;
+    margin: .25rem 0 .75rem;
+    color: #f1f5f9;
+}
+
+.dash-timer-acciones {
+    display: flex;
+    gap: .5rem;
+    justify-content: center;
+    flex-wrap: wrap;
+}
+
+/* Timer alertas */
+.dash-timer--alerta {
+    border-color: #f59e0b;
+    box-shadow: 0 0 0 2px rgba(245,158,11,.2);
+}
+.dash-timer--alerta .dash-timer-tiempo { color: #fbbf24; }
+
+.dash-timer--critico {
+    border-color: #ef4444;
+    box-shadow: 0 0 0 2px rgba(239,68,68,.2);
+    animation: dash-pulso-critico 1s ease-in-out infinite;
+}
+.dash-timer--critico .dash-timer-tiempo { color: #f87171; }
+
+@keyframes dash-pulso-critico {
+    0%, 100% { box-shadow: 0 0 0 2px rgba(239,68,68,.2); }
+    50%       { box-shadow: 0 0 0 6px rgba(239,68,68,.35); }
+}
+
+/* ── Tabs de base ────────────────────────────────────────────────── */
+.dash-tabs {
+    display: flex;
+    padding: 0 1rem;
+    gap: .5rem;
+    margin-bottom: .75rem;
+}
+
+.dash-tab {
+    flex: 1;
+    padding: .65rem .5rem;
+    border-radius: .5rem;
+    border: 2px solid var(--border, #334155);
+    background: transparent;
+    color: var(--text-dim, #9ca3af);
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+    text-align: center;
+}
+
+.dash-tab--activo {
+    border-color: #3b82f6;
+    background: rgba(59,130,246,.1);
+    color: #93c5fd;
+}
+
+.dash-tab-prog {
+    display: inline-block;
+    margin-left: .35rem;
+    font-size: .75rem;
+    opacity: .75;
+}
+
+/* ── Contenido de base ───────────────────────────────────────────── */
+.dash-contenido {
+    padding: 0 1rem;
+}
+
+.dash-base--oculta {
+    display: none;
+}
+
+/* ── Tarjeta de paso activo ──────────────────────────────────────── */
+.dash-paso {
+    background: var(--card-bg, #1e293b);
+    border: 1px solid var(--border, #334155);
+    border-radius: .75rem;
+    padding: 1rem;
+    margin-bottom: .75rem;
+    transition: border-color .3s, box-shadow .3s;
+}
+
+.dash-paso--en-curso {
+    border-color: #3b82f6;
+    box-shadow: 0 0 0 2px rgba(59,130,246,.15);
+}
+
+.dash-paso-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: .4rem;
+}
+
+.dash-paso-num {
+    font-size: .75rem;
+    color: var(--text-dim, #9ca3af);
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.dash-paso-tipo {
+    font-size: .8rem;
+    color: var(--text-dim, #9ca3af);
+    font-weight: 600;
+}
+
+.dash-paso-nombre {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: #f1f5f9;
+    margin-bottom: .85rem;
+    line-height: 1.2;
+}
+
+/* ── Barras duales ───────────────────────────────────────────────── */
+.dash-barras {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+    margin-bottom: 1rem;
+}
+
+.dash-barra-row {
+    display: grid;
+    grid-template-columns: 4rem 1fr 3.5rem;
+    align-items: center;
+    gap: .4rem;
+}
+
+.dash-barra-label {
+    font-size: .75rem;
+    color: var(--text-dim, #9ca3af);
+    text-align: right;
+    white-space: nowrap;
+}
+
+.dash-barra-contenedor {
+    height: 1.1rem;
+    background: rgba(255,255,255,.06);
+    border-radius: 99px;
+    overflow: hidden;
+}
+
+.dash-barra {
+    height: 100%;
+    border-radius: 99px;
+    transition: width .15s linear;
+    min-width: 0;
+}
+
+.dash-barra--sistema {
+    background: linear-gradient(90deg, #38bdf8, #0284c7);
+}
+
+.dash-barra--real {
+    background: linear-gradient(90deg, #4ade80, #16a34a);
+}
+
+.dash-barra--excedida {
+    background: linear-gradient(90deg, #f87171, #dc2626) !important;
+}
+
+.dash-barra-tiempo {
+    font-size: .75rem;
+    font-variant-numeric: tabular-nums;
+    color: #cbd5e1;
+    text-align: left;
+    white-space: nowrap;
+}
+
+/* Nota del sistema (tiempo restante en cambio) */
+.dash-sistema-nota {
+    display: block;
+    font-size: .75rem;
+    color: #38bdf8;
+    margin-bottom: .6rem;
+    text-align: center;
+}
+
+/* ── Botones de acción ───────────────────────────────────────────── */
+.dash-paso-acciones {
+    display: flex;
+    flex-direction: column;
+    gap: .5rem;
+}
+
+/* Botón extra grande para mobile */
+.btn--xl {
+    padding: 1rem 1.25rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+    border-radius: .6rem;
+    min-height: 3.25rem;
+    width: 100%;
+    letter-spacing: .02em;
+}
+
+.dash-hint {
+    text-align: center;
+    padding: .5rem;
+}
+
+/* ── Secuencia completada ────────────────────────────────────────── */
+.dash-secuencia-ok {
+    background: rgba(74,222,128,.08);
+    border: 1px solid rgba(74,222,128,.3);
+    border-radius: .75rem;
+    padding: 1.25rem;
+    text-align: center;
+    font-size: 1rem;
+    font-weight: 600;
+    color: #86efac;
+    margin-bottom: .75rem;
+}
+
+/* ── Historial ───────────────────────────────────────────────────── */
+.dash-historial {
+    margin-bottom: .75rem;
+}
+
+.dash-historial-titulo {
+    font-size: .8rem;
+    text-transform: uppercase;
+    letter-spacing: .1em;
+    color: var(--text-dim, #9ca3af);
+    margin: 0 0 .5rem;
+    padding-top: .25rem;
+}
+
+.dash-hist-item {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    padding: .55rem .75rem;
+    border-radius: .5rem;
+    background: var(--card-bg, #1e293b);
+    border: 1px solid var(--border, #334155);
+    margin-bottom: .35rem;
+    font-size: .85rem;
+}
+
+.dash-hist-item--fallido {
+    border-color: rgba(239,68,68,.3);
+    background: rgba(239,68,68,.05);
+}
+
+.dash-hist-icono {
+    font-size: 1rem;
+    flex-shrink: 0;
+}
+
+.dash-hist-info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: .1rem;
+}
+
+.dash-hist-nombre {
+    font-weight: 600;
+    color: #e2e8f0;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dash-hist-motivo {
+    font-size: .72rem;
+    color: #f87171;
+}
+
+.dash-hist-tiempos {
+    display: flex;
+    align-items: center;
+    gap: .3rem;
+    font-size: .8rem;
+    flex-shrink: 0;
+    white-space: nowrap;
+}
+
+.dash-hist-flecha {
+    color: var(--text-dim, #9ca3af);
+}
+
+.dash-hist-diff {
+    font-weight: 700;
+    padding: .1rem .3rem;
+    border-radius: .25rem;
+    font-size: .75rem;
+}
+
+.dash-hist-diff--over   { color: #f87171; background: rgba(239,68,68,.12); }
+.dash-hist-diff--under  { color: #4ade80; background: rgba(74,222,128,.12); }
+.dash-hist-diff--ok     { color: #fbbf24; background: rgba(251,191,36,.12); }
+
+/* ── Resumen final ───────────────────────────────────────────────── */
+.dash-resumen {
+    padding: 1rem;
+    margin-top: .5rem;
+}
+
+.dash-resumen h3 {
+    margin: 0 0 .25rem;
+    font-size: 1.1rem;
+}
+
+.dash-resumen-bloques {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.dash-resumen-bloque {
+    background: var(--card-bg, #1e293b);
+    border: 1px solid var(--border, #334155);
+    border-radius: .75rem;
+    padding: 1rem;
+}
+
+.dash-resumen-bloque h4 {
+    margin: 0 0 .5rem;
+    font-size: 1rem;
+}
+
+.dash-resumen-alerta {
+    font-size: .85rem;
+    color: #f87171;
+    margin: 0 0 .5rem;
+}
+
+.dash-resumen-tabla-wrap {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+.dash-resumen-tabla {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: .82rem;
+}
+
+.dash-resumen-tabla th,
+.dash-resumen-tabla td {
+    padding: .45rem .5rem;
+    text-align: left;
+    border-bottom: 1px solid var(--border, #334155);
+}
+
+.dash-resumen-tabla th {
+    color: var(--text-dim, #9ca3af);
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .05em;
+}
+
+.dash-resumen-tabla td:first-child {
+    max-width: 10rem;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.dash-resumen-total td {
+    border-top: 2px solid var(--border, #334155);
+    border-bottom: none;
+    padding-top: .6rem;
+}
+
+/* ── Responsive — pantallas más anchas ──────────────────────────── */
+@media (min-width: 600px) {
+    .dash-resumen-bloques {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    .dash-resumen-bloque {
+        flex: 1;
+    }
+    .dash-paso-acciones {
+        flex-direction: row;
+    }
+    .btn--xl {
+        width: auto;
+        flex: 1;
+    }
+}

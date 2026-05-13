@@ -17,8 +17,9 @@
     Router.registrar("jugadores", ModuloJugadores);
     Router.registrar("misiones",  ModuloMisiones);
     Router.registrar("lanzadas",  ModuloLanzadas);
-    Router.registrar("rankings",  ModuloRankings);
-    Router.registrar("analisis",  ModuloAnalisis);
+    Router.registrar("rankings",   ModuloRankings);
+    Router.registrar("analisis",   ModuloAnalisis);
+    Router.registrar("dashboard",  ModuloDashboard);
 
     // Muestra enlace admin solo a perfiles admin.
     const linkAdmin = document.querySelector('.app-nav a[data-ruta="admin"]');

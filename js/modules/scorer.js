@@ -13,6 +13,7 @@ const ModuloScorer = (() => {
     // Estado del módulo (reinicia en cada render)
     let state = null;
     let timerId = null;
+    let alertasSonido = { a30: false, a10: false };
 
     // --------------------------------------------------------------
     //  Inicialización y render
@@ -238,8 +239,9 @@ const ModuloScorer = (() => {
         return v === true;
     }
 
-    /** Resalta el siguiente control útil o, antes de iniciar, huecos de base / Iniciar. */
+    /** Gestiona el foco visual: guía de bases pre-partida y pulso en botones de acción. */
     function actualizarFocoScorer() {
+        // Limpieza defensiva de clases anteriores
         document.querySelectorAll(".ctrl--siguiente").forEach((el) =>
             el.classList.remove("ctrl--siguiente"));
         document.querySelectorAll(".mision-tarjeta--foco, .mision-tarjeta--proxima").forEach((el) => {
@@ -265,46 +267,6 @@ const ModuloScorer = (() => {
                 btnIni.classList.add("btn--cta-pulse");
             }
             return;
-        }
-
-        let misionFocoIdx = -1;
-        for (let i = 0; i < state.misiones.length; i++) {
-            const m = state.misiones[i];
-            const prog = state.progresoMisiones[m.id];
-            if (!prog || prog.fallada) continue;
-            if (misionCompletada(m, prog)) continue;
-            const controles = Array.isArray(m.bonus) ? m.bonus : [];
-            let pintada = false;
-            for (const c of controles) {
-                if (controlTotalmenteSatisfecho(c, prog)) continue;
-                const card = root.querySelector(`[data-mision-id="${m.id}"]`);
-                if (!card) break;
-                const ctrl = [...card.querySelectorAll(".ctrl")].find(
-                    (el) => el.dataset.codigo === c.codigo);
-                if (ctrl) {
-                    ctrl.classList.add("ctrl--siguiente");
-                    card.classList.add("mision-tarjeta--foco");
-                    misionFocoIdx = i;
-                    ctrl.scrollIntoView({ block: "nearest", behavior: "smooth" });
-                    pintada = true;
-                }
-                break;
-            }
-            if (pintada) break;
-        }
-
-        // Resaltar la SIGUIENTE misión pendiente para guiar al coach
-        // (cuadro tenue verde) cuando se complete la actual.
-        if (misionFocoIdx >= 0) {
-            for (let j = misionFocoIdx + 1; j < state.misiones.length; j++) {
-                const mn = state.misiones[j];
-                const pn = state.progresoMisiones[mn.id];
-                if (!pn || pn.fallada) continue;
-                if (misionCompletada(mn, pn)) continue;
-                const cardN = root.querySelector(`[data-mision-id="${mn.id}"]`);
-                if (cardN) cardN.classList.add("mision-tarjeta--proxima");
-                break;
-            }
         }
 
         if (state.partidaEnCurso) {
@@ -746,6 +708,7 @@ const ModuloScorer = (() => {
             toast("Debes asignar 2 jugadores a cada base antes de iniciar", "error");
             return;
         }
+        alertasSonido = { a30: false, a10: false };
         state.partidaIniciada   = true;
         state.partidaEnCurso    = true;
         state.partidaFinalizada = false;
@@ -777,6 +740,36 @@ const ModuloScorer = (() => {
         if (timerId) { clearInterval(timerId); timerId = null; }
     }
 
+    // --------------------------------------------------------------
+    //  Alertas sonoras del cronómetro
+    // --------------------------------------------------------------
+    function crearTono(frecuencia, duracion, tipo = "sine") {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            const osc  = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.type = tipo;
+            osc.frequency.value = frecuencia;
+            gain.gain.setValueAtTime(0.35, ctx.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + duracion);
+            osc.start(ctx.currentTime);
+            osc.stop(ctx.currentTime + duracion);
+        } catch (_) { /* AudioContext no disponible en este contexto */ }
+    }
+
+    function sonarAlerta30() {
+        crearTono(660, 0.18);
+        setTimeout(() => crearTono(660, 0.18), 320);
+    }
+
+    function sonarAlerta10() {
+        crearTono(880, 0.12);
+        setTimeout(() => crearTono(880, 0.12), 200);
+        setTimeout(() => crearTono(1100, 0.28), 400);
+    }
+
     function actualizarCronometro() {
         const t  = document.getElementById("crono-tiempo");
         const c  = document.getElementById("cronometro");
@@ -784,8 +777,19 @@ const ModuloScorer = (() => {
         t.textContent = formatearTiempo(state.restante);
         c.classList.remove("alerta", "critico");
         if (state.partidaEnCurso) {
-            if (state.restante <= 10)      c.classList.add("critico");
-            else if (state.restante <= 30) c.classList.add("alerta");
+            if (state.restante <= 10) {
+                c.classList.add("critico");
+                if (!alertasSonido.a10) {
+                    alertasSonido.a10 = true;
+                    sonarAlerta10();
+                }
+            } else if (state.restante <= 30) {
+                c.classList.add("alerta");
+                if (!alertasSonido.a30) {
+                    alertasSonido.a30 = true;
+                    sonarAlerta30();
+                }
+            }
         }
     }
 
