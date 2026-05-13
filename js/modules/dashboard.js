@@ -46,6 +46,7 @@ const ModuloDashboard = (() => {
             gameFinalizado: false,
             gameRestante:   PARTIDA_SEG,
             gameInicio:     null,
+            baseInicial:    "azul",   // base donde arranca el robot
         };
 
         baseActiva = "azul";
@@ -141,6 +142,17 @@ const ModuloDashboard = (() => {
                 <div class="dash-game-timer" id="dash-game-timer">
                     <div class="dash-timer-estado" id="dash-timer-estado">Listo para iniciar</div>
                     <div class="dash-timer-tiempo" id="dash-timer-tiempo">02:30</div>
+                    <div class="dash-base-selector" id="dash-base-selector">
+                        <span class="dash-base-selector-label">El robot inicia en:</span>
+                        <div class="dash-base-selector-btns">
+                            <button class="dash-base-btn dash-base-btn--activo" id="dash-base-azul-btn" data-base="azul">
+                                🟦 Base Azul
+                            </button>
+                            <button class="dash-base-btn" id="dash-base-roja-btn" data-base="roja">
+                                🟥 Base Roja
+                            </button>
+                        </div>
+                    </div>
                     <div class="dash-timer-acciones">
                         <button class="btn btn--success btn--big" id="dash-btn-iniciar">▶ Iniciar Partida</button>
                         <button class="btn btn--danger" id="dash-btn-finalizar" hidden disabled>■ Finalizar</button>
@@ -180,6 +192,17 @@ const ModuloDashboard = (() => {
         cont.querySelector("#dash-btn-finalizar").addEventListener("click", () => finalizarGame(false));
         cont.querySelector("#tab-azul").addEventListener("click", () => mostrarBase("azul"));
         cont.querySelector("#tab-roja").addEventListener("click", () => mostrarBase("roja"));
+
+        // Selector de base inicial
+        cont.querySelectorAll(".dash-base-btn").forEach((btn) => {
+            btn.addEventListener("click", () => {
+                if (state.gameIniciado) return;
+                state.baseInicial = btn.dataset.base;
+                cont.querySelectorAll(".dash-base-btn").forEach((b) =>
+                    b.classList.toggle("dash-base-btn--activo", b.dataset.base === state.baseInicial)
+                );
+            });
+        });
     }
 
     function mostrarBase(base) {
@@ -214,11 +237,19 @@ const ModuloDashboard = (() => {
             if (segs <= 0) finalizarGame(true);
         }, 200);
 
-        // El robot inicia en Base Azul; Roja arranca solo cuando Azul termina
-        autoArrancarPaso("azul");
-        renderBase("roja"); // mostrar pantalla de espera en Roja
+        // Ocultar el selector de base
+        const selector = document.getElementById("dash-base-selector");
+        if (selector) selector.hidden = true;
 
-        toast("¡Partida iniciada! Base Azul en curso. Base Roja arrancará al finalizar.", "success");
+        const baseInicial  = state.baseInicial;
+        const baseEspera   = baseInicial === "azul" ? "roja" : "azul";
+        const labelInicial = baseInicial === "azul" ? "🟦 Base Azul" : "🟥 Base Roja";
+
+        autoArrancarPaso(baseInicial);
+        renderBase(baseEspera); // mostrar pantalla de espera en la otra base
+        mostrarBase(baseInicial);
+
+        toast(`¡Partida iniciada! ${labelInicial} en curso. La otra base arrancará al finalizar.`, "success");
     }
 
     function finalizarGame(porTiempo = false) {
@@ -314,21 +345,25 @@ const ModuloDashboard = (() => {
         const esLanzada = paso.tipo === "lanzada";
         const esCambio  = paso.tipo === "cambio";
 
-        // Base Roja en espera mientras Base Azul no ha terminado
-        if (base === "roja" && paso.estado === "pendiente" && state.gameIniciado) {
-            const secAzul = state.secuencias["azul"];
-            const azulTerminada = !secAzul || secAzul.curIdx >= secAzul.secuencia.length;
-            if (!azulTerminada) {
-                const hechoAzul = secAzul.secuencia.filter(
+        // Base en espera: es la segunda base y la inicial todavía no terminó
+        const esSegunda = state.gameIniciado && paso.estado === "pendiente"
+            && base !== state.baseInicial;
+        if (esSegunda) {
+            const secInicial    = state.secuencias[state.baseInicial];
+            const inicialTerminada = !secInicial || secInicial.curIdx >= secInicial.secuencia.length;
+            if (!inicialTerminada) {
+                const hechos = secInicial.secuencia.filter(
                     (p) => p.estado === "completado" || p.estado === "fallido"
                 ).length;
-                const totalAzul = secAzul.secuencia.length;
+                const totalIn  = secInicial.secuencia.length;
+                const iconoEsp = base === "azul" ? "🟦" : "🟥";
+                const labelIni = state.baseInicial === "azul" ? "Base Azul" : "Base Roja";
                 pasoCont.innerHTML = `<div class="dash-esperando-base">
-                    <div class="dash-esperando-icono">🟥</div>
-                    <div class="dash-esperando-titulo">Base Roja en espera</div>
+                    <div class="dash-esperando-icono">${iconoEsp}</div>
+                    <div class="dash-esperando-titulo">${base === "azul" ? "Base Azul" : "Base Roja"} en espera</div>
                     <div class="dash-esperando-sub">
-                        El robot terminará Base Azul primero
-                        <span class="dash-esperando-prog">${hechoAzul}/${totalAzul} pasos</span>
+                        El robot terminará ${labelIni} primero
+                        <span class="dash-esperando-prog">${hechos}/${totalIn} pasos</span>
                     </div>
                 </div>`;
                 actualizarTabProg(base);
@@ -546,24 +581,25 @@ const ModuloDashboard = (() => {
     }
 
     // ------------------------------------------------------------------
-    //  Cuando Base Azul termina → arranca Base Roja automáticamente
-    //  (un solo robot: Azul primero, Roja después)
+    //  Cuando la base inicial termina → arranca la segunda base
+    //  (un solo robot: primero la base elegida, luego la otra)
     // ------------------------------------------------------------------
     function verificarOtraBase(baseTerminada) {
-        // Solo aplica el traspaso Azul → Roja (el robot pasa a la otra base)
-        if (baseTerminada !== "azul") return;
         if (!state || !state.gameIniciado) return;
+        // Solo dispara el traspaso cuando es la base inicial la que termina
+        if (baseTerminada !== state.baseInicial) return;
 
-        const sec = state.secuencias["roja"];
+        const baseSegunda = baseTerminada === "azul" ? "roja" : "azul";
+        const label       = baseSegunda === "azul" ? "🟦 Base Azul" : "🟥 Base Roja";
+        const sec         = state.secuencias[baseSegunda];
         if (!sec || sec.secuencia.length === 0) return;
-        if (sec.curIdx >= sec.secuencia.length) return; // Roja ya terminó
+        if (sec.curIdx >= sec.secuencia.length) return;
 
         const paso = sec.secuencia[sec.curIdx];
         if (paso.estado === "pendiente") {
-            toast("Base Azul completada — arrancando Base Roja 🟥", "success");
-            autoArrancarPaso("roja");
-            // Cambiar la vista al tab de Roja automáticamente
-            mostrarBase("roja");
+            toast(`Base inicial completada — arrancando ${label}`, "success");
+            autoArrancarPaso(baseSegunda);
+            mostrarBase(baseSegunda);
         }
     }
 

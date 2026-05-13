@@ -48,6 +48,51 @@
     color: #f1f5f9;
 }
 
+/* Selector de base inicial */
+.dash-base-selector {
+    margin-bottom: .85rem;
+}
+
+.dash-base-selector-label {
+    display: block;
+    font-size: .75rem;
+    text-transform: uppercase;
+    letter-spacing: .08em;
+    color: var(--text-dim, #9ca3af);
+    margin-bottom: .4rem;
+}
+
+.dash-base-selector-btns {
+    display: flex;
+    gap: .4rem;
+    justify-content: center;
+}
+
+.dash-base-btn {
+    flex: 1;
+    padding: .55rem .75rem;
+    border-radius: .5rem;
+    border: 2px solid var(--border, #334155);
+    background: transparent;
+    color: var(--text-dim, #9ca3af);
+    font-size: .9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: all .2s;
+}
+
+.dash-base-btn--activo[data-base="azul"] {
+    border-color: #3b82f6;
+    background: rgba(59,130,246,.12);
+    color: #93c5fd;
+}
+
+.dash-base-btn--activo[data-base="roja"] {
+    border-color: #ef4444;
+    background: rgba(239,68,68,.12);
+    color: #fca5a5;
+}
+
 .dash-timer-acciones {
     display: flex;
     gap: .5rem;
