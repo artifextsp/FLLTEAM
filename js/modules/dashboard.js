@@ -1,17 +1,15 @@
 // =====================================================================
 //  Módulo DASHBOARD — Seguimiento en tiempo real para el entrenador
 //  ------------------------------------------------------------------
-//  El entrenador usa esta pantalla (desde el celular) durante la
-//  partida para medir el tiempo real de cada lanzada y cada cambio
-//  de mecanismo versus los tiempos calculados por el sistema.
+//  Flujo AUTO-CADENA por base:
+//    • Al iniciar partida → ambas bases arrancan su 1.ª lanzada
+//    • "Llegó a base"     → lanzada termina, cambio de mecanismo arranca AUTOMÁTICAMENTE
+//    • "Terminó cambio"   → cambio termina, siguiente lanzada arranca AUTOMÁTICAMENTE
+//    • "Fallida"          → lanzada marcada, siguiente paso arranca AUTOMÁTICAMENTE
+//    • Cuando una base termina → revisa si la otra tiene un paso pendiente y lo arranca
 //
-//  Flujo por base:
-//    Lanzada 1 → Cambio 1 → Lanzada 2 → Cambio 2 → ... → Lanzada N
-//
-//  Barras duales por paso:
-//    "Sistema": tiempo planificado — se agota de izquierda a derecha.
-//    "Real":    tiempo medido por el entrenador — crece.
-//  Si Real > Sistema, la barra real se torna roja.
+//  Botones del entrenador (solo estos):
+//    ⏹ Llegó a base · ⏹ Terminó cambio · ✗ Fallida
 // =====================================================================
 
 const ModuloDashboard = (() => {
@@ -36,7 +34,7 @@ const ModuloDashboard = (() => {
             return;
         }
 
-        const lanzadas = await ApiLanzadas.listar(equipoId);
+        const lanzadas   = await ApiLanzadas.listar(equipoId);
         const secuencias = calcularSecuencias(lanzadas);
 
         state = {
@@ -86,12 +84,12 @@ const ModuloDashboard = (() => {
         const Y = byBase.roja.reduce((s, l) => s + (Number(l.tiempo_recorrido_seg) || 0), 0);
         const K = PARTIDA_SEG - (X + Y);
         const P = K / 2;
-        const nAzul = byBase.azul.length;
-        const nRoja = byBase.roja.length;
+        const nAzul     = byBase.azul.length;
+        const nRoja     = byBase.roja.length;
         const cambiosAzul = Math.max(nAzul - 1, 1);
         const cambiosRoja = Math.max(nRoja - 1, 1);
-        const tAzul = nAzul > 1 ? P / cambiosAzul : 0;
-        const tRoja = nRoja > 1 ? P / cambiosRoja : 0;
+        const tAzul     = nAzul > 1 ? P / cambiosAzul : 0;
+        const tRoja     = nRoja > 1 ? P / cambiosRoja : 0;
 
         return {
             azul: { secuencia: buildSecuencia(byBase.azul, tAzul), curIdx: 0 },
@@ -103,16 +101,16 @@ const ModuloDashboard = (() => {
         const seq = [];
         launches.forEach((l, i) => {
             seq.push({
-                tipo:      "lanzada",
-                id:        l.id,
-                nombre:    l.nombre,
-                tiempoPlan: Number(l.tiempo_recorrido_seg) || 0,
-                tiempoReal: null,
+                tipo:        "lanzada",
+                id:          l.id,
+                nombre:      l.nombre,
+                tiempoPlan:  Number(l.tiempo_recorrido_seg) || 0,
+                tiempoReal:  null,
                 // estado: pendiente | en_curso | completado | fallido
-                estado:    "pendiente",
-                inicio:    null,       // cuando el entrenador presionó "start"
-                fin:       null,
-                fallida:   false,
+                estado:      "pendiente",
+                inicio:      null,
+                fin:         null,
+                fallida:     false,
                 motivoFalla: null,
             });
             if (i < launches.length - 1) {
@@ -121,11 +119,9 @@ const ModuloDashboard = (() => {
                     nombre:     `Cambio de mecanismo ${i + 1}`,
                     tiempoPlan: Math.round(tCambio * 10) / 10,
                     tiempoReal: null,
-                    // estado: pendiente | sistema_activo | real_activo | completado
                     estado:     "pendiente",
-                    inicioSistema: null,   // auto-inicia al completar la lanzada previa
-                    inicio:        null,   // inicia cuando el entrenador presiona
-                    fin:           null,
+                    inicio:     null,
+                    fin:        null,
                 });
             }
         });
@@ -175,7 +171,7 @@ const ModuloDashboard = (() => {
     }
 
     // ------------------------------------------------------------------
-    //  Eventos
+    //  Eventos de UI
     // ------------------------------------------------------------------
     function conectarEventos(cont) {
         cont.querySelector("#dash-btn-iniciar").addEventListener("click", iniciarGame);
@@ -216,9 +212,11 @@ const ModuloDashboard = (() => {
             if (segs <= 0) finalizarGame(true);
         }, 200);
 
-        renderBase("azul");
-        renderBase("roja");
-        toast("¡Partida iniciada! Usa los botones para seguir cada lanzada.", "success");
+        // Auto-arrancar primera lanzada de AMBAS bases simultáneamente
+        autoArrancarPaso("azul");
+        autoArrancarPaso("roja");
+
+        toast("¡Partida iniciada! Las lanzadas arrancaron automáticamente.", "success");
     }
 
     function finalizarGame(porTiempo = false) {
@@ -250,10 +248,32 @@ const ModuloDashboard = (() => {
         if (bloqueEl) {
             bloqueEl.classList.remove("dash-timer--alerta", "dash-timer--critico");
             if (state.gameIniciado) {
-                if (state.gameRestante <= 10) bloqueEl.classList.add("dash-timer--critico");
+                if (state.gameRestante <= 10)      bloqueEl.classList.add("dash-timer--critico");
                 else if (state.gameRestante <= 30) bloqueEl.classList.add("dash-timer--alerta");
             }
         }
+    }
+
+    // ------------------------------------------------------------------
+    //  Auto-arranque de un paso (inicia las barras sin botón)
+    // ------------------------------------------------------------------
+    function autoArrancarPaso(base) {
+        if (!state) return;
+        const sec = state.secuencias[base];
+        if (!sec || sec.curIdx >= sec.secuencia.length) return;
+        const paso = sec.secuencia[sec.curIdx];
+        if (paso.estado !== "pendiente") return;
+
+        paso.estado = "en_curso";
+        paso.inicio = Date.now();
+
+        arrancarTimerBase(base);
+        renderBase(base);
+    }
+
+    function arrancarTimerBase(base) {
+        if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
+        baseTimers[base] = setInterval(() => actualizarBarras(base), 100);
     }
 
     // ------------------------------------------------------------------
@@ -276,132 +296,98 @@ const ModuloDashboard = (() => {
         }
 
         if (sec.curIdx >= sec.secuencia.length) {
+            if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
             pasoCont.innerHTML = `<div class="dash-secuencia-ok">
-                ✅ Secuencia completada — ${base === "azul" ? "Base Azul" : "Base Roja"}
+                ✅ Secuencia completa — ${base === "azul" ? "Base Azul" : "Base Roja"}
             </div>`;
             renderHistorial(base);
             actualizarTabProg(base);
+            // Cuando una base termina, revisar si la otra tiene algo pendiente
+            verificarOtraBase(base);
             return;
         }
 
-        const paso     = sec.secuencia[sec.curIdx];
-        const pasoNum  = sec.curIdx + 1;
-        const totalPasos = sec.secuencia.length;
-        const esLanzada  = paso.tipo === "lanzada";
-        const esCambio   = paso.tipo === "cambio";
+        const paso      = sec.secuencia[sec.curIdx];
+        const pasoNum   = sec.curIdx + 1;
+        const total     = sec.secuencia.length;
+        const esLanzada = paso.tipo === "lanzada";
+        const esCambio  = paso.tipo === "cambio";
 
-        // ── Barras ────────────────────────────────────────────────────
-        // Sistema: barra de referencia estática (ancho proporcional a tiempoPlan)
-        // Real:    crece con el tiempo real medido
-        const tiempoPlan  = paso.tiempoPlan || 0;
-        const maxDisplay  = Math.max(tiempoPlan * 1.5, 10);
-        const sistemaPct  = tiempoPlan > 0 ? Math.min(100, (tiempoPlan / maxDisplay) * 100) : 0;
+        // ── Calcular anchos de barras ────────────────────────────────
+        const tiempoPlan = paso.tiempoPlan || 0;
+        const maxDisplay = Math.max(tiempoPlan * 1.5, 10);
+        const sistemaPct = tiempoPlan > 0 ? Math.min(100, (tiempoPlan / maxDisplay) * 100) : 0;
 
-        // Tiempo real según el estado actual
         let realElapsed = 0;
         if (paso.estado === "en_curso" && paso.inicio) {
-            realElapsed = (Date.now() - paso.inicio) / 1000;
-        } else if (paso.estado === "real_activo" && paso.inicio) {
             realElapsed = (Date.now() - paso.inicio) / 1000;
         } else if (paso.tiempoReal !== null) {
             realElapsed = paso.tiempoReal;
         }
-
-        const realPct    = Math.min(100, (realElapsed / maxDisplay) * 100);
+        const realPct   = Math.min(100, (realElapsed / maxDisplay) * 100);
         const realExcede = realElapsed > tiempoPlan && tiempoPlan > 0;
-
-        // Tiempo sistema para cambios (desde que se auto-inició)
-        let sistemaElapsedCambio = 0;
-        let sistemaRemainingPct  = sistemaPct;
-        if (esCambio && paso.inicioSistema) {
-            sistemaElapsedCambio = (Date.now() - paso.inicioSistema) / 1000;
-            const remaining = Math.max(0, tiempoPlan - sistemaElapsedCambio);
-            sistemaRemainingPct = tiempoPlan > 0
-                ? Math.min(100, (remaining / tiempoPlan) * sistemaPct) : 0;
-        }
-
-        const sistemaBarStyle = esCambio && paso.inicioSistema
-            ? `width: ${sistemaRemainingPct}%;`
-            : `width: ${sistemaPct}%;`;
 
         const tiempoRealStr = realElapsed > 0 ? `${realElapsed.toFixed(1)}s` : "—";
         const tiempoPlanStr = tiempoPlan > 0 ? `${tiempoPlan.toFixed(1)}s` : "N/D";
 
-        // ── Botones de acción según tipo y estado ─────────────────────
+        // ── Etiquetas de estado ──────────────────────────────────────
+        let etiquetaEstado = "";
+        if (paso.estado === "en_curso") {
+            etiquetaEstado = esCambio ? "⚙️ Cambiando mecanismo..." : "🚀 En recorrido...";
+        } else if (!state.gameIniciado && !state.gameFinalizado) {
+            etiquetaEstado = "Esperando inicio de partida";
+        }
+
+        // ── Botones según tipo y estado ──────────────────────────────
         let accionesHTML = "";
         if (!state.gameIniciado && !state.gameFinalizado) {
             accionesHTML = `<p class="text-dim small dash-hint">Inicia la partida para comenzar el seguimiento.</p>`;
         } else if (state.gameFinalizado) {
             accionesHTML = `<p class="text-dim small dash-hint">Partida finalizada.</p>`;
-        } else {
+        } else if (paso.estado === "en_curso") {
             if (esLanzada) {
-                if (paso.estado === "pendiente") {
-                    accionesHTML = `
-                        <button class="btn btn--success btn--xl dash-btn-accion"
-                            data-accion="iniciar" data-base="${base}">
-                            ▶ Salió de base
-                        </button>
-                        <button class="btn btn--danger btn--xl dash-btn-accion"
-                            data-accion="fallar" data-base="${base}">
-                            ✗ Marcar fallida
-                        </button>`;
-                } else if (paso.estado === "en_curso") {
-                    accionesHTML = `
-                        <button class="btn btn--primary btn--xl dash-btn-accion"
-                            data-accion="completar" data-base="${base}">
-                            ⏹ Llegó a base
-                        </button>
-                        <button class="btn btn--danger btn--xl dash-btn-accion"
-                            data-accion="fallar" data-base="${base}">
-                            ✗ Marcar fallida
-                        </button>`;
-                }
-            } else if (esCambio) {
-                if (paso.estado === "sistema_activo") {
-                    accionesHTML = `
-                        <button class="btn btn--success btn--xl dash-btn-accion"
-                            data-accion="iniciar-real" data-base="${base}">
-                            ▶ Inició cambio de mecanismo
-                        </button>`;
-                } else if (paso.estado === "real_activo") {
-                    accionesHTML = `
-                        <button class="btn btn--primary btn--xl dash-btn-accion"
-                            data-accion="completar" data-base="${base}">
-                            ⏹ Terminó cambio
-                        </button>`;
-                }
+                accionesHTML = `
+                    <button class="btn btn--primary btn--xl dash-btn-accion"
+                        data-accion="completar" data-base="${base}">
+                        ⏹ Llegó a base
+                    </button>
+                    <button class="btn btn--danger btn--xl dash-btn-accion"
+                        data-accion="fallar" data-base="${base}">
+                        ✗ Fallida
+                    </button>`;
+            } else {
+                // cambio en curso
+                accionesHTML = `
+                    <button class="btn btn--primary btn--xl dash-btn-accion"
+                        data-accion="completar" data-base="${base}">
+                        ⏹ Terminó cambio de mecanismo
+                    </button>`;
             }
+        } else if (paso.estado === "pendiente") {
+            // Solo ocurre si el juego no arrancó aún o hay un desfase
+            accionesHTML = `<p class="text-dim small dash-hint">Esperando arranque automático…</p>`;
         }
 
-        const enCursoClass = (paso.estado === "en_curso" || paso.estado === "real_activo")
-            ? "dash-paso--en-curso" : "";
-        const iconoTipo = esLanzada ? "🚀" : "⚙️";
-
-        let sistemaNota = "";
-        if (esCambio && paso.estado === "sistema_activo") {
-            const restante = Math.max(0, tiempoPlan - sistemaElapsedCambio);
-            sistemaNota = `<span class="dash-sistema-nota" id="dash-sistema-nota-${base}">
-                ⏱ Sistema: ${restante.toFixed(1)}s restantes</span>`;
-        }
+        const enCursoClass = paso.estado === "en_curso" ? "dash-paso--en-curso" : "";
+        const iconoTipo    = esLanzada ? "🚀" : "⚙️";
 
         pasoCont.innerHTML = `
         <div class="dash-paso ${enCursoClass}" id="dash-paso-activo-${base}">
             <div class="dash-paso-header">
-                <span class="dash-paso-num">Paso ${pasoNum} / ${totalPasos}</span>
+                <span class="dash-paso-num">Paso ${pasoNum} / ${total}</span>
                 <span class="dash-paso-tipo">${iconoTipo} ${esLanzada ? "Lanzada" : "Cambio de mecanismo"}</span>
             </div>
             <div class="dash-paso-nombre">${escapeHtml(paso.nombre)}</div>
+            ${etiquetaEstado ? `<div class="dash-etiqueta-estado">${etiquetaEstado}</div>` : ""}
 
             <div class="dash-barras">
                 <div class="dash-barra-row">
                     <span class="dash-barra-label">Sistema</span>
                     <div class="dash-barra-contenedor">
                         <div class="dash-barra dash-barra--sistema" id="dash-bar-sis-${base}"
-                             style="${sistemaBarStyle}"></div>
+                             style="width: ${sistemaPct}%;"></div>
                     </div>
-                    <span class="dash-barra-tiempo" id="dash-bar-sis-t-${base}">
-                        ${tiempoPlanStr}
-                    </span>
+                    <span class="dash-barra-tiempo">${tiempoPlanStr}</span>
                 </div>
                 <div class="dash-barra-row">
                     <span class="dash-barra-label">Real</span>
@@ -410,12 +396,10 @@ const ModuloDashboard = (() => {
                              id="dash-bar-real-${base}"
                              style="width: ${realPct}%;"></div>
                     </div>
-                    <span class="dash-barra-tiempo" id="dash-bar-real-t-${base}">
-                        ${tiempoRealStr}
-                    </span>
+                    <span class="dash-barra-tiempo" id="dash-bar-real-t-${base}">${tiempoRealStr}</span>
                 </div>
             </div>
-            ${sistemaNota}
+
             <div class="dash-paso-acciones">
                 ${accionesHTML}
             </div>
@@ -425,18 +409,13 @@ const ModuloDashboard = (() => {
         pasoCont.querySelectorAll(".dash-btn-accion").forEach((btn) => {
             const accion = btn.dataset.accion;
             const b      = btn.dataset.base;
-            if (accion === "iniciar")      btn.addEventListener("click", () => iniciarPaso(b));
-            if (accion === "completar")    btn.addEventListener("click", () => completarPaso(b));
-            if (accion === "fallar")       btn.addEventListener("click", () => fallarPaso(b));
-            if (accion === "iniciar-real") btn.addEventListener("click", () => iniciarRealCambio(b));
+            if (accion === "completar") btn.addEventListener("click", () => completarPaso(b));
+            if (accion === "fallar")    btn.addEventListener("click", () => fallarPaso(b));
         });
 
-        // Arrancar timer de actualización de barras si el paso está activo
-        const necesitaTimer = paso.estado === "en_curso" || paso.estado === "real_activo"
-            || (esCambio && paso.estado === "sistema_activo");
-        if (necesitaTimer) {
-            if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
-            baseTimers[base] = setInterval(() => actualizarBarras(base), 100);
+        // Arrancar timer de barras si el paso está en curso
+        if (paso.estado === "en_curso") {
+            arrancarTimerBase(base);
         }
 
         renderHistorial(base);
@@ -444,102 +423,59 @@ const ModuloDashboard = (() => {
     }
 
     // ------------------------------------------------------------------
-    //  Actualización de barras (en tiempo real, sin re-render completo)
+    //  Actualización de barras en tiempo real (sin re-render)
     // ------------------------------------------------------------------
     function actualizarBarras(base) {
         if (!state) return;
         const sec = state.secuencias[base];
-        if (!sec || sec.curIdx >= sec.secuencia.length) return;
+        if (!sec || sec.curIdx >= sec.secuencia.length) {
+            if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
+            return;
+        }
         const paso = sec.secuencia[sec.curIdx];
+        if (paso.estado !== "en_curso" || !paso.inicio) return;
 
         const tiempoPlan = paso.tiempoPlan || 0;
         const maxDisplay = Math.max(tiempoPlan * 1.5, 10);
+        const elapsed    = (Date.now() - paso.inicio) / 1000;
+        const realPct    = Math.min(100, (elapsed / maxDisplay) * 100);
+        const excede     = elapsed > tiempoPlan && tiempoPlan > 0;
 
-        // ── Barra Sistema (para cambios con inicio automático) ────────
-        if (paso.tipo === "cambio" && paso.inicioSistema) {
-            const sElapsed   = (Date.now() - paso.inicioSistema) / 1000;
-            const remaining  = Math.max(0, tiempoPlan - sElapsed);
-            const sisPct     = tiempoPlan > 0
-                ? Math.min(100, (remaining / tiempoPlan) * (tiempoPlan / maxDisplay) * 100) : 0;
-            const sisBar  = document.getElementById(`dash-bar-sis-${base}`);
-            const sisNota = document.getElementById(`dash-sistema-nota-${base}`);
-            if (sisBar) sisBar.style.width = `${sisPct}%`;
-            if (sisNota) sisNota.textContent = `⏱ Sistema: ${remaining.toFixed(1)}s restantes`;
+        const realBar = document.getElementById(`dash-bar-real-${base}`);
+        const realTxt = document.getElementById(`dash-bar-real-t-${base}`);
+        if (realBar) {
+            realBar.style.width = `${realPct}%`;
+            realBar.classList.toggle("dash-barra--excedida", excede);
         }
-
-        // ── Barra Real ────────────────────────────────────────────────
-        if (paso.inicio) {
-            const rElapsed  = (Date.now() - paso.inicio) / 1000;
-            const realPct   = Math.min(100, (rElapsed / maxDisplay) * 100);
-            const excede    = rElapsed > tiempoPlan && tiempoPlan > 0;
-
-            const realBar  = document.getElementById(`dash-bar-real-${base}`);
-            const realTxt  = document.getElementById(`dash-bar-real-t-${base}`);
-            if (realBar) {
-                realBar.style.width = `${realPct}%`;
-                realBar.classList.toggle("dash-barra--excedida", excede);
-            }
-            if (realTxt) realTxt.textContent = `${rElapsed.toFixed(1)}s`;
-        }
+        if (realTxt) realTxt.textContent = `${elapsed.toFixed(1)}s`;
     }
 
     // ------------------------------------------------------------------
-    //  Acciones del coach
+    //  Completar un paso → auto-encadenar el siguiente
     // ------------------------------------------------------------------
-    function iniciarPaso(base) {
-        if (!state || !state.gameIniciado) return;
-        const sec = state.secuencias[base];
-        if (!sec || sec.curIdx >= sec.secuencia.length) return;
-        const paso = sec.secuencia[sec.curIdx];
-        if (paso.estado !== "pendiente") return;
-
-        paso.estado = "en_curso";
-        paso.inicio = Date.now();
-
-        if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
-        renderBase(base);
-    }
-
-    function iniciarRealCambio(base) {
-        if (!state || !state.gameIniciado) return;
-        const sec = state.secuencias[base];
-        if (!sec || sec.curIdx >= sec.secuencia.length) return;
-        const paso = sec.secuencia[sec.curIdx];
-        if (paso.tipo !== "cambio" || paso.estado !== "sistema_activo") return;
-
-        paso.estado = "real_activo";
-        paso.inicio = Date.now();
-
-        if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
-        renderBase(base);
-    }
-
     function completarPaso(base) {
         if (!state) return;
         const sec = state.secuencias[base];
         if (!sec || sec.curIdx >= sec.secuencia.length) return;
         const paso = sec.secuencia[sec.curIdx];
-        if (paso.estado !== "en_curso" && paso.estado !== "real_activo") return;
+        if (paso.estado !== "en_curso") return;
 
+        // Detener timer de barras
         if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
 
-        paso.fin       = Date.now();
+        paso.fin        = Date.now();
         paso.tiempoReal = paso.inicio ? (paso.fin - paso.inicio) / 1000 : null;
-        paso.estado    = "completado";
+        paso.estado     = "completado";
         sec.curIdx++;
 
-        // Si el siguiente es un cambio, iniciar su timer de sistema automáticamente
-        if (sec.curIdx < sec.secuencia.length) {
-            const siguiente = sec.secuencia[sec.curIdx];
-            if (siguiente.tipo === "cambio") {
-                siguiente.estado        = "sistema_activo";
-                siguiente.inicioSistema = Date.now();
-            }
-        }
-
+        // Auto-arrancar el siguiente paso inmediatamente
+        autoArrancarPaso(base);
         renderBase(base);
     }
 
+    // ------------------------------------------------------------------
+    //  Marcar lanzada como fallida → auto-encadenar el siguiente
+    // ------------------------------------------------------------------
     async function fallarPaso(base) {
         if (!state) return;
         const sec = state.secuencias[base];
@@ -568,27 +504,38 @@ const ModuloDashboard = (() => {
                     otro:         "Otro",
                 };
                 const motivo = body.querySelector("#f-motivo").value;
+
                 if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
 
-                paso.estado     = "fallido";
-                paso.fallida    = true;
+                paso.estado      = "fallido";
+                paso.fallida     = true;
                 paso.motivoFalla = textos[motivo] || "Otro";
-                paso.fin        = Date.now();
-                paso.tiempoReal = paso.inicio ? (paso.fin - paso.inicio) / 1000 : null;
+                paso.fin         = Date.now();
+                paso.tiempoReal  = paso.inicio ? (paso.fin - paso.inicio) / 1000 : null;
                 sec.curIdx++;
 
-                // Si el siguiente es un cambio, lo activamos en sistema igualmente
-                if (sec.curIdx < sec.secuencia.length) {
-                    const siguiente = sec.secuencia[sec.curIdx];
-                    if (siguiente.tipo === "cambio") {
-                        siguiente.estado        = "sistema_activo";
-                        siguiente.inicioSistema = Date.now();
-                    }
-                }
+                // Auto-arrancar el siguiente paso
+                autoArrancarPaso(base);
             },
         });
 
         renderBase(base);
+    }
+
+    // ------------------------------------------------------------------
+    //  Cuando una base termina, arranca pasos pendientes en la otra
+    // ------------------------------------------------------------------
+    function verificarOtraBase(baseTerminada) {
+        const otra = baseTerminada === "azul" ? "roja" : "azul";
+        const sec  = state?.secuencias[otra];
+        if (!sec || sec.curIdx >= sec.secuencia.length) return;
+
+        const paso = sec.secuencia[sec.curIdx];
+        // Si hay un paso pendiente en la otra base (no debería ocurrir con el
+        // auto-arranque normal, pero cubre el caso de bases asimétricas)
+        if (paso.estado === "pendiente" && state.gameIniciado) {
+            autoArrancarPaso(otra);
+        }
     }
 
     // ------------------------------------------------------------------
@@ -627,8 +574,10 @@ const ModuloDashboard = (() => {
                     <div class="dash-hist-tiempos">
                         <span class="text-dim">${p.tiempoPlan > 0 ? p.tiempoPlan.toFixed(1) + "s" : "—"}</span>
                         <span class="dash-hist-flecha">→</span>
-                        <span>${p.tiempoReal !== null ? p.tiempoReal.toFixed(1) + "s" : (p.estado === "fallido" ? "fallida" : "—")}</span>
-                        ${diff !== null ? `<span class="dash-hist-diff ${diffClass}">${diffStr}</span>` : ""}
+                        <span>${p.tiempoReal !== null ? p.tiempoReal.toFixed(1) + "s"
+                            : (p.estado === "fallido" ? "fallida" : "—")}</span>
+                        ${diff !== null
+                            ? `<span class="dash-hist-diff ${diffClass}">${diffStr}</span>` : ""}
                     </div>
                 </div>`;
             }).join("")}
@@ -640,8 +589,8 @@ const ModuloDashboard = (() => {
         if (!el || !state) return;
         const sec = state.secuencias[base];
         if (!sec || sec.secuencia.length === 0) { el.textContent = ""; return; }
-        const total    = sec.secuencia.length;
-        const hechos   = sec.secuencia.filter(
+        const total  = sec.secuencia.length;
+        const hechos = sec.secuencia.filter(
             (p) => p.estado === "completado" || p.estado === "fallido"
         ).length;
         el.textContent = `${hechos}/${total}`;
@@ -666,23 +615,22 @@ const ModuloDashboard = (() => {
             const sumPlanC  = cambios.reduce((s, p) => s + (p.tiempoPlan || 0), 0);
             const sumRealC  = cambios.reduce((s, p) => s + (p.tiempoReal || 0), 0);
             const fallidas  = lanzadas.filter((p) => p.fallida).length;
-
-            const diffL = sumRealL - sumPlanL;
-            const diffC = sumRealC - sumPlanC;
-
-            const label = base === "azul" ? "🟦 Base Azul" : "🟥 Base Roja";
+            const diffL     = sumRealL - sumPlanL;
+            const diffC     = sumRealC - sumPlanC;
+            const label     = base === "azul" ? "🟦 Base Azul" : "🟥 Base Roja";
 
             const filaHtml = (p) => {
                 const d = (p.tiempoReal !== null && p.tiempoPlan > 0)
                     ? p.tiempoReal - p.tiempoPlan : null;
                 const dStr   = d !== null ? (d >= 0 ? `+${d.toFixed(1)}s` : `${d.toFixed(1)}s`) : "—";
                 const dColor = d === null ? "" : d > 3 ? "#f87171" : d < -3 ? "#4ade80" : "#fbbf24";
-                const est = p.estado === "fallido" ? "❌" : p.estado === "completado" ? "✅" : "⏳";
-                const icono = p.tipo === "lanzada" ? "🚀" : "⚙️";
+                const est    = p.estado === "fallido" ? "❌" : p.estado === "completado" ? "✅" : "⏳";
+                const icono  = p.tipo === "lanzada" ? "🚀" : "⚙️";
                 return `<tr>
                     <td>${est} ${icono} ${escapeHtml(p.nombre)}</td>
                     <td>${p.tiempoPlan > 0 ? p.tiempoPlan.toFixed(1) + "s" : "—"}</td>
-                    <td>${p.tiempoReal !== null ? p.tiempoReal.toFixed(1) + "s" : (p.estado === "fallido" ? "fallida" : "—")}</td>
+                    <td>${p.tiempoReal !== null ? p.tiempoReal.toFixed(1) + "s"
+                        : (p.estado === "fallido" ? "fallida" : "—")}</td>
                     <td style="color:${dColor};font-weight:bold;">${dStr}</td>
                 </tr>`;
             };
@@ -692,27 +640,28 @@ const ModuloDashboard = (() => {
 
             return `<div class="dash-resumen-bloque">
                 <h4>${label}</h4>
-                ${fallidas > 0 ? `<p class="dash-resumen-alerta">⚠ ${fallidas} lanzada(s) fallida(s)</p>` : ""}
+                ${fallidas > 0
+                    ? `<p class="dash-resumen-alerta">⚠ ${fallidas} lanzada(s) fallida(s)</p>` : ""}
                 <div class="dash-resumen-tabla-wrap">
                     <table class="dash-resumen-tabla">
                         <thead>
                             <tr><th>Paso</th><th>Plan</th><th>Real</th><th>Dif.</th></tr>
                         </thead>
-                        <tbody>
-                            ${sec.secuencia.map(filaHtml).join("")}
-                        </tbody>
+                        <tbody>${sec.secuencia.map(filaHtml).join("")}</tbody>
                         <tfoot>
                             ${lanzadas.length > 0 ? `<tr class="dash-resumen-total">
                                 <td><strong>Total lanzadas</strong></td>
                                 <td><strong>${sumPlanL.toFixed(1)}s</strong></td>
                                 <td><strong>${sumRealL.toFixed(1)}s</strong></td>
-                                <td style="color:${diffLColor};font-weight:bold;">${diffL >= 0 ? "+" : ""}${diffL.toFixed(1)}s</td>
+                                <td style="color:${diffLColor};font-weight:bold;">
+                                    ${diffL >= 0 ? "+" : ""}${diffL.toFixed(1)}s</td>
                             </tr>` : ""}
                             ${cambios.length > 0 ? `<tr class="dash-resumen-total">
                                 <td><strong>Total cambios</strong></td>
                                 <td><strong>${sumPlanC.toFixed(1)}s</strong></td>
                                 <td><strong>${sumRealC.toFixed(1)}s</strong></td>
-                                <td style="color:${diffCColor};font-weight:bold;">${diffC >= 0 ? "+" : ""}${diffC.toFixed(1)}s</td>
+                                <td style="color:${diffCColor};font-weight:bold;">
+                                    ${diffC >= 0 ? "+" : ""}${diffC.toFixed(1)}s</td>
                             </tr>` : ""}
                         </tfoot>
                     </table>
@@ -723,8 +672,9 @@ const ModuloDashboard = (() => {
         cont.hidden = false;
         cont.innerHTML = `
         <h3>📊 Resumen de seguimiento</h3>
-        <p class="text-dim small">Planeado vs. Real por cada paso.
-            <span style="color:#4ade80;">Verde</span> = ganaste tiempo ·
+        <p class="text-dim small">
+            Planeado vs. Real por cada paso. &nbsp;
+            <span style="color:#4ade80;">Verde</span> = tiempo ganado ·
             <span style="color:#f87171;">Rojo</span> = tiempo excedido.
         </p>
         <div class="dash-resumen-bloques">

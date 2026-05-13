@@ -161,6 +161,15 @@
     line-height: 1.2;
 }
 
+/* Etiqueta de estado en curso */
+.dash-etiqueta-estado {
+    font-size: .82rem;
+    font-weight: 600;
+    color: #38bdf8;
+    margin-bottom: .75rem;
+    letter-spacing: .02em;
+}
+
 /* ── Barras duales ───────────────────────────────────────────────── */
 .dash-barras {
     display: flex;
