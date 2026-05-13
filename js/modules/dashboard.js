@@ -254,6 +254,8 @@ const ModuloDashboard = (() => {
 
     function finalizarGame(porTiempo = false) {
         if (!state) return;
+
+        // Detener todos los timers
         if (gameTimerId) { clearInterval(gameTimerId); gameTimerId = null; }
         ["azul", "roja"].forEach((b) => {
             if (baseTimers[b]) { clearInterval(baseTimers[b]); baseTimers[b] = null; }
@@ -261,6 +263,17 @@ const ModuloDashboard = (() => {
 
         state.gameFinalizado = true;
         state.gameIniciado   = false;
+
+        // Congelar el tiempo real de cualquier paso que estuviera en curso
+        ["azul", "roja"].forEach((b) => {
+            const sec = state.secuencias[b];
+            if (!sec || sec.curIdx >= sec.secuencia.length) return;
+            const paso = sec.secuencia[sec.curIdx];
+            if (paso.estado === "en_curso" && paso.inicio) {
+                paso.tiempoReal = (Date.now() - paso.inicio) / 1000;
+                // Mantener en_curso para que el resumen lo muestre como incompleto
+            }
+        });
 
         const btnFin = document.getElementById("dash-btn-finalizar");
         if (btnFin) btnFin.disabled = true;
@@ -471,8 +484,8 @@ const ModuloDashboard = (() => {
             if (accion === "fallar")    btn.addEventListener("click", () => fallarPaso(b));
         });
 
-        // Arrancar timer de barras si el paso está en curso
-        if (paso.estado === "en_curso") {
+        // Arrancar timer de barras solo si la partida sigue en curso
+        if (paso.estado === "en_curso" && state.gameIniciado) {
             arrancarTimerBase(base);
         }
 
@@ -484,7 +497,11 @@ const ModuloDashboard = (() => {
     //  Actualización de barras en tiempo real (sin re-render)
     // ------------------------------------------------------------------
     function actualizarBarras(base) {
-        if (!state) return;
+        if (!state || !state.gameIniciado) {
+            // Partida terminada: detener el interval si sigue activo
+            if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
+            return;
+        }
         const sec = state.secuencias[base];
         if (!sec || sec.curIdx >= sec.secuencia.length) {
             if (baseTimers[base]) { clearInterval(baseTimers[base]); baseTimers[base] = null; }
